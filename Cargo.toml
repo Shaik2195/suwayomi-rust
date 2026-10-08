@@ -37,7 +37,7 @@ image = "0.24"
 axum = { version = "0.7", features = ["macros", "ws"] }
 async-graphql = "7.0"
 async-graphql-axum = "7.0"
-tower-http = { version = "0.5", features = ["cors", "trace", "fs"] }
+tower-http = { version = "0.5", features = ["cors", "trace", "fs", "compression-full"] }
 rust-embed = "8.0"
 clap = { version = "4.0", features = ["derive"] }
 config = "0.14"
