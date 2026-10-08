@@ -1,0 +1,7 @@
+target/
+.git/
+Suwayomi-Server/
+Suwayomi-Server-docker/
+*.db
+*.db-journal
+.env

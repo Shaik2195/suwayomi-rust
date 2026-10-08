@@ -1,8 +1,8 @@
-FROM rust:1.82-alpine AS builder
+FROM rust:alpine AS builder
 
 WORKDIR /app
 
-RUN apk add --no-cache musl-dev sqlite-dev openssl-dev
+RUN apk add --no-cache musl-dev sqlite-dev sqlite-static openssl-dev openssl-libs-static pkgconfig build-base
 
 # Copy workspace cargo files
 COPY Cargo.toml Cargo.lock ./
@@ -10,7 +10,10 @@ COPY Cargo.toml Cargo.lock ./
 # Copy crates
 COPY crates ./crates
 
-# Build the workspace
+# Test the workspace
+RUN cargo test --workspace
+
+# Build the workspace release binary
 RUN cargo build --release --bin suwayomi-server
 
 # Runtime stage
