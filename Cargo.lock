@@ -3795,9 +3795,11 @@ name = "suwayomi-db"
 version = "0.1.0"
 dependencies = [
  "chrono",
+ "serde_json",
  "sqlx",
  "suwayomi-core",
  "thiserror 1.0.69",
+ "tokio",
  "tracing",
 ]
 
