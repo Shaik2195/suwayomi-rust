@@ -1,0 +1,19 @@
+[package]
+name = "suwayomi-api"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+suwayomi-core = { workspace = true }
+suwayomi-db = { workspace = true }
+suwayomi-extensions = { workspace = true }
+suwayomi-downloader = { workspace = true }
+axum = { workspace = true }
+async-graphql = { workspace = true }
+async-graphql-axum = { workspace = true }
+tower-http = { workspace = true }
+tokio = { workspace = true }
+tracing = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+rust-embed = { workspace = true }

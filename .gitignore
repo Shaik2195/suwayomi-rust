@@ -2,3 +2,6 @@
 *.db
 *.db-journal
 .env
+Suwayomi-Server/
+Suwayomi-Server-docker/
+

@@ -1,0 +1,50 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/suwayomi-core",
+    "crates/suwayomi-db",
+    "crates/suwayomi-extensions",
+    "crates/suwayomi-downloader",
+    "crates/suwayomi-api",
+    "crates/suwayomi-server",
+]
+
+[workspace.dependencies]
+# Standard / Core
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+chrono = { version = "0.4", features = ["serde"] }
+thiserror = "1.0"
+async-trait = "0.1"
+uuid = { version = "1.0", features = ["v4", "serde"] }
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+tokio = { version = "1.0", features = ["full"] }
+anyhow = "1.0"
+
+# Database
+sqlx = { version = "0.7", features = ["sqlite", "runtime-tokio", "chrono", "uuid", "macros"] }
+
+# Extensions
+reqwest = { version = "0.12", features = ["json"] }
+boa_engine = "0.19"
+zip = "0.6"
+
+# Downloader
+image = "0.24"
+
+# API / Server
+axum = { version = "0.7", features = ["macros", "ws"] }
+async-graphql = "7.0"
+async-graphql-axum = "7.0"
+tower-http = { version = "0.5", features = ["cors", "trace", "fs"] }
+rust-embed = "8.0"
+clap = { version = "4.0", features = ["derive"] }
+config = "0.14"
+
+# Internal Crates
+suwayomi-core = { path = "crates/suwayomi-core" }
+suwayomi-db = { path = "crates/suwayomi-db" }
+suwayomi-extensions = { path = "crates/suwayomi-extensions" }
+suwayomi-downloader = { path = "crates/suwayomi-downloader" }
+suwayomi-api = { path = "crates/suwayomi-api" }
