@@ -3809,8 +3809,10 @@ version = "0.1.0"
 dependencies = [
  "image",
  "reqwest",
+ "sqlx",
  "suwayomi-core",
  "suwayomi-db",
+ "tempfile",
  "thiserror 1.0.69",
  "tokio",
  "tracing",
