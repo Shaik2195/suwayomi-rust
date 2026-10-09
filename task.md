@@ -65,5 +65,18 @@ Each session only touches files within its own crate directory. Session 1 create
   - Status: Completed (docs/ARCHITECTURE_REVIEW.md created)
   - Deliverable: Comprehensive subsystem review, Mermaid diagram, gap matrix, and 4-phase technical roadmap.
 
+## Phase 8: API & WebUI Contract Parity (Solo)
+- `[ ]` **Session 10** — Tachidesk-WebUI contract parity, dual endpoints, camelCase GraphQL, image routes
+  - Issue: #11
+  - Session ID: `6978530845011705030`
+  - URL: https://jules.google.com/session/6978530845011705030
+  - Status: In Progress
+
+## Polling
+- Poll interval: every 5 minutes via cron
+- Tool: Jules MCP only (`jules_list_sessions`)
+- No duplicate dispatches
+
+
 
 
