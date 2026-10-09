@@ -66,16 +66,13 @@ Each session only touches files within its own crate directory. Session 1 create
   - Deliverable: Comprehensive subsystem review, Mermaid diagram, gap matrix, and 4-phase technical roadmap.
 
 ## Phase 8: API & WebUI Contract Parity (Solo)
-- `[ ]` **Session 10** — Tachidesk-WebUI contract parity, dual endpoints, camelCase GraphQL, image routes
-  - Issue: #11
+- `[x]` **Session 10** — Tachidesk-WebUI contract parity, dual endpoints, camelCase GraphQL, image routes
+  - Issue: #11 (closed)
   - Session ID: `6978530845011705030`
   - URL: https://jules.google.com/session/6978530845011705030
-  - Status: In Progress
+  - Status: Completed (applied & pushed to `main`)
+  - Deliverables: `/api/graphql` alias, camelCase GraphQL mappings (`isRead`, `thumbnailUrl`, `pageCount`, etc.), root queries (`aboutServer`, `aboutWebUI`, `settings`, `metas`, `downloadStatus`), and `/thumbnail` & `/page/:page` image REST routes.
 
-## Polling
-- Poll interval: every 5 minutes via cron
-- Tool: Jules MCP only (`jules_list_sessions`)
-- No duplicate dispatches
 
 
 
