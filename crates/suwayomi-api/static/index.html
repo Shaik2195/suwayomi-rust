@@ -132,13 +132,18 @@
     <main>
         <div id="server-info" class="server-info">Connecting to server...</div>
         
-        <h2>Library</h2>
-        <div id="manga-grid" class="manga-grid">
-            <!-- Manga cards will be rendered here -->
+        <h2 id="view-title">Library</h2>
+        <div id="search-container" style="display: none; margin-bottom: 1.5rem;">
+            <input type="text" id="extension-search" placeholder="Search extensions..." style="padding: 0.5rem; width: 100%; max-width: 400px; border-radius: 4px; border: 1px solid var(--border-color); background: var(--bg-color); color: var(--text-primary);">
+        </div>
+        <div id="content-grid" class="manga-grid">
+            <!-- Content cards will be rendered here -->
         </div>
     </main>
 
     <script>
+        let allExtensions = [];
+        
         // Utility to escape HTML and prevent XSS
         function escapeHtml(unsafe) {
             if (!unsafe) return '';
@@ -152,17 +157,12 @@
         }
 
         // GraphQL Query
-        const query = `
+        const libraryQuery = `
             query {
                 aboutServer {
                     name
                     version
                     buildTime
-                }
-                categories {
-                    id
-                    name
-                    order
                 }
                 mangas(categoryId: null) {
                     id
@@ -173,31 +173,45 @@
             }
         `;
 
-        async function fetchLibraryData() {
-            try {
-                // Try /api/graphql first, fallback to /graphql if needed
-                let endpoint = '/api/graphql';
-                
-                let response = await fetch(endpoint, {
+        const extensionsQuery = `
+            query {
+                availableExtensions {
+                    pkgName
+                    name
+                    versionName
+                    lang
+                    iconUrl
+                    isNsfw
+                }
+            }
+        `;
+
+        async function graphQLRequest(query) {
+            let endpoint = '/api/graphql';
+            let response = await fetch(endpoint, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ query })
+            });
+
+            if (!response.ok) {
+                endpoint = '/graphql';
+                response = await fetch(endpoint, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                     },
                     body: JSON.stringify({ query })
                 });
+            }
+            return await response.json();
+        }
 
-                if (!response.ok) {
-                    endpoint = '/graphql';
-                    response = await fetch(endpoint, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                        },
-                        body: JSON.stringify({ query })
-                    });
-                }
-
-                const result = await response.json();
+        async function fetchLibraryData() {
+            try {
+                const result = await graphQLRequest(libraryQuery);
                 
                 if (result.data) {
                     renderServerInfo(result.data.aboutServer);
@@ -212,6 +226,24 @@
             }
         }
 
+        async function fetchExtensionsData() {
+            try {
+                document.getElementById('content-grid').innerHTML = '<p>Loading extensions...</p>';
+                const result = await graphQLRequest(extensionsQuery);
+                
+                if (result.data) {
+                    allExtensions = result.data.availableExtensions || [];
+                    renderExtensions(allExtensions);
+                } else if (result.errors) {
+                    console.error('GraphQL errors:', result.errors);
+                    document.getElementById('server-info').innerText = 'Error loading extensions.';
+                }
+            } catch (error) {
+                console.error('Error fetching extensions:', error);
+                document.getElementById('server-info').innerText = 'Failed to load extensions.';
+            }
+        }
+
         function renderServerInfo(aboutServer) {
             if (!aboutServer) return;
             const el = document.getElementById('server-info');
@@ -221,7 +253,7 @@
         }
 
         function renderMangas(mangas) {
-            const grid = document.getElementById('manga-grid');
+            const grid = document.getElementById('content-grid');
             if (!mangas || mangas.length === 0) {
                 grid.innerHTML = '<p>No manga found in library.</p>';
                 return;
@@ -243,6 +275,58 @@
                 </div>
             `}).join('');
         }
+
+        function renderExtensions(extensions) {
+            const grid = document.getElementById('content-grid');
+            if (!extensions || extensions.length === 0) {
+                grid.innerHTML = '<p>No extensions found.</p>';
+                return;
+            }
+
+            grid.innerHTML = extensions.map(ext => {
+                const title = escapeHtml(ext.name);
+                const pkg = escapeHtml(ext.pkgName);
+                const version = escapeHtml(ext.versionName);
+                const lang = escapeHtml(ext.lang || 'all');
+                const icon = escapeHtml(ext.iconUrl || '');
+                // Highlight AllManga logic if search matches
+                const highlightStyle = (ext.pkgName === 'eu.kanade.tachiyomi.extension.en.allanime' || title.toLowerCase().includes('allmanga') || title.toLowerCase().includes('allanime')) ? 'border: 2px solid var(--primary-color);' : '';
+                
+                return `
+                <div class="manga-card" style="padding: 1rem; ${highlightStyle}">
+                    <div style="display: flex; align-items: center; gap: 1rem;">
+                        <img src="${icon}" alt="${title}" style="width: 48px; height: 48px; border-radius: 8px;" onerror="this.src='data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiPjxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbGw9IiMyYTJhMmEiLz48L3N2Zz4='">
+                        <div>
+                            <h3 class="manga-title" style="margin:0; font-size: 1.1rem;" title="${title}">${title}</h3>
+                            <p class="manga-author" style="margin: 0.2rem 0; font-size: 0.8rem;">${pkg}</p>
+                            <span style="background: var(--border-color); padding: 0.2rem 0.4rem; border-radius: 4px; font-size: 0.75rem;">${lang}</span>
+                            <span style="background: var(--border-color); padding: 0.2rem 0.4rem; border-radius: 4px; font-size: 0.75rem;">v${version}</span>
+                        </div>
+                    </div>
+                    <button style="margin-top: 1rem; width: 100%; padding: 0.5rem; background: var(--primary-color); color: var(--bg-color); border: none; border-radius: 4px; font-weight: bold; cursor: pointer;" onclick="alert('Install functionality not implemented')">Install</button>
+                </div>
+            `}).join('');
+        }
+
+        // Search logic
+        document.getElementById('extension-search').addEventListener('input', (e) => {
+            const term = e.target.value.toLowerCase();
+            const filtered = allExtensions.filter(ext => 
+                ext.name.toLowerCase().includes(term) || ext.pkgName.toLowerCase().includes(term)
+            );
+            
+            // special sort to bring allmanga/allanime up if search matches
+            if (term.includes('allmanga') || term.includes('allanime')) {
+                filtered.sort((a, b) => {
+                    const aMatch = a.pkgName === 'eu.kanade.tachiyomi.extension.en.allanime';
+                    const bMatch = b.pkgName === 'eu.kanade.tachiyomi.extension.en.allanime';
+                    if (aMatch && !bMatch) return -1;
+                    if (!aMatch && bMatch) return 1;
+                    return 0;
+                });
+            }
+            renderExtensions(filtered);
+        });
 
         // Simple SPA router fallback
         function navigate(event, path) {
@@ -273,8 +357,39 @@
         // Initial load
         document.addEventListener('DOMContentLoaded', () => {
             updateNav();
-            fetchLibraryData();
+            
+            const path = window.location.pathname;
+            if (path === '/browse') {
+                document.getElementById('view-title').innerText = 'Browse Extensions';
+                document.getElementById('search-container').style.display = 'block';
+                fetchExtensionsData();
+            } else {
+                document.getElementById('view-title').innerText = 'Library';
+                document.getElementById('search-container').style.display = 'none';
+                fetchLibraryData();
+            }
         });
+
+        // Extend updateNav/navigate to trigger correct fetch
+        const originalNavigate = navigate;
+        navigate = function(event, path) {
+            originalNavigate(event, path);
+            
+            if (path === '/browse') {
+                document.getElementById('view-title').innerText = 'Browse Extensions';
+                document.getElementById('search-container').style.display = 'block';
+                document.getElementById('extension-search').value = '';
+                fetchExtensionsData();
+            } else if (path === '/library' || path === '/') {
+                document.getElementById('view-title').innerText = 'Library';
+                document.getElementById('search-container').style.display = 'none';
+                fetchLibraryData();
+            } else {
+                document.getElementById('view-title').innerText = path.substring(1);
+                document.getElementById('search-container').style.display = 'none';
+                document.getElementById('content-grid').innerHTML = '<p>Work in progress.</p>';
+            }
+        }
     </script>
 </body>
 </html>

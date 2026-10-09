@@ -46,10 +46,24 @@ async fn main() -> anyhow::Result<()> {
     // Run migrations
     suwayomi_db::migrations::run_migrations(&pool).await?;
 
+    // Configure Extension Registry
+    let repos = vec![
+        suwayomi_extensions::types::ExtensionRepo {
+            name: "Keiyoushi".to_string(),
+            url: "https://raw.githubusercontent.com/keiyoushi/extensions/repo/index.pb".to_string(),
+        }
+    ];
+    let extension_registry = std::sync::Arc::new(suwayomi_extensions::registry::ExtensionRegistry::new(repos));
+
     // Build API router
     let download_queue = suwayomi_downloader::queue::DownloadQueue::new();
-    let schema = suwayomi_api::create_schema(pool.clone(), download_queue.clone());
-    let state = AppState { pool: pool.clone(), schema, download_queue: download_queue.clone() };
+    let schema = suwayomi_api::create_schema(pool.clone(), download_queue.clone(), extension_registry.clone());
+    let state = AppState { 
+        pool: pool.clone(), 
+        schema, 
+        download_queue: download_queue.clone(),
+        extension_registry,
+    };
     let app = suwayomi_api::create_router(state);
 
     // Start background download workers

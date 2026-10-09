@@ -255,6 +255,54 @@ pub struct DownloadStatusPayload {
     pub error: i32,
 }
 
+#[derive(async_graphql::SimpleObject, Clone)]
+pub struct ExtensionListing {
+    #[graphql(name = "pkgName")]
+    pub pkg_name: String,
+    pub name: String,
+    #[graphql(name = "versionName")]
+    pub version_name: String,
+    #[graphql(name = "versionCode")]
+    pub version_code: i64,
+    pub lang: String,
+    #[graphql(name = "isNsfw")]
+    pub is_nsfw: bool,
+    #[graphql(name = "apkUrl")]
+    pub apk_url: String,
+    #[graphql(name = "iconUrl")]
+    pub icon_url: String,
+}
+
+impl From<suwayomi_extensions::types::ExtensionListing> for ExtensionListing {
+    fn from(listing: suwayomi_extensions::types::ExtensionListing) -> Self {
+        Self {
+            pkg_name: listing.pkg_name,
+            name: listing.name,
+            version_name: listing.version_name,
+            version_code: listing.version_code,
+            lang: listing.lang,
+            is_nsfw: listing.is_nsfw,
+            apk_url: listing.apk_url,
+            icon_url: listing.icon_url,
+        }
+    }
+}
+
+#[derive(async_graphql::SimpleObject, Clone)]
+pub struct ExtensionRepo {
+    pub name: String,
+    pub url: String,
+}
+
+impl From<suwayomi_extensions::types::ExtensionRepo> for ExtensionRepo {
+    fn from(repo: suwayomi_extensions::types::ExtensionRepo) -> Self {
+        Self {
+            name: repo.name,
+            url: repo.url,
+        }
+    }
+}
+
 pub struct QueryRoot;
 
 #[Object]
@@ -348,6 +396,26 @@ impl QueryRoot {
         let repo = CategoryRepository::new(pool);
         let result = repo.get_categories().await?;
         Ok(result.into_iter().map(|c| c.into()).collect())
+    }
+
+    #[graphql(name = "availableExtensions")]
+    async fn available_extensions(&self, ctx: &Context<'_>) -> async_graphql::Result<Vec<ExtensionListing>> {
+        let registry = ctx.data::<std::sync::Arc<suwayomi_extensions::registry::ExtensionRegistry>>()?;
+        let result = registry.get_available_extensions().await
+            .map_err(|e| async_graphql::Error::new(e.to_string()))?;
+        Ok(result.into_iter().map(|ext| ext.into()).collect())
+    }
+
+    #[graphql(name = "installedExtensions")]
+    async fn installed_extensions(&self, _ctx: &Context<'_>) -> async_graphql::Result<Vec<ExtensionListing>> {
+        // Currently installed extensions are not fully tracked; returning an empty list for now.
+        Ok(vec![])
+    }
+
+    #[graphql(name = "extensionRepos")]
+    async fn extension_repos(&self, ctx: &Context<'_>) -> async_graphql::Result<Vec<ExtensionRepo>> {
+        let registry = ctx.data::<std::sync::Arc<suwayomi_extensions::registry::ExtensionRegistry>>()?;
+        Ok(registry.repos.iter().cloned().map(|r| r.into()).collect())
     }
 }
 

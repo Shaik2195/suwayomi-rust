@@ -19,6 +19,7 @@ pub struct AppState {
     pub pool: SqlitePool,
     pub schema: AppSchema,
     pub download_queue: DownloadQueue,
+    pub extension_registry: std::sync::Arc<suwayomi_extensions::registry::ExtensionRegistry>,
 }
 
 pub fn create_router(state: AppState) -> Router {
@@ -45,9 +46,14 @@ pub fn create_router(state: AppState) -> Router {
         .with_state(state.schema.clone())
 }
 
-pub fn create_schema(pool: SqlitePool, download_queue: DownloadQueue) -> AppSchema {
+pub fn create_schema(
+    pool: SqlitePool,
+    download_queue: DownloadQueue,
+    extension_registry: std::sync::Arc<suwayomi_extensions::registry::ExtensionRegistry>,
+) -> AppSchema {
     Schema::build(QueryRoot, MutationRoot, EmptySubscription)
         .data(pool)
         .data(download_queue)
+        .data(extension_registry)
         .finish()
 }

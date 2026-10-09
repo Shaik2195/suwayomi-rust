@@ -21,12 +21,14 @@ async fn test_spa_static_files_fallback() {
     run_migrations(&pool).await.unwrap();
 
     let download_queue = DownloadQueue::new();
-    let schema = create_schema(pool.clone(), download_queue.clone());
+    let extension_registry = std::sync::Arc::new(suwayomi_extensions::registry::ExtensionRegistry::new(vec![]));
+    let schema = create_schema(pool.clone(), download_queue.clone(), extension_registry.clone());
     
     let state = AppState {
         pool,
         schema,
         download_queue,
+        extension_registry,
     };
 
     let app = create_router(state);
