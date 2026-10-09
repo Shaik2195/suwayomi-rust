@@ -49,7 +49,15 @@ Each session only touches files within its own crate directory. Session 1 create
   - URL: https://jules.google.com/session/280927253613283980
   - Status: Completed (applied & pushed to `main`)
 
+## Phase 6: E2E & UI Testing (Solo)
+- `[ ]` **Session 8** — E2E & UI testing suite for GraphQL & REST endpoints
+  - Issue: #9
+  - Session ID: `17580404197599752853`
+  - URL: https://jules.google.com/session/17580404197599752853
+  - Status: In Progress
+
 ## Polling
 - Poll interval: every 5 minutes via cron
 - Tool: Jules MCP only (`jules_list_sessions`)
 - No duplicate dispatches
+

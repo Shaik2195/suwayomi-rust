@@ -5,3 +5,7 @@
 Suwayomi-Server/
 Suwayomi-Server-docker/
 
+node_modules
+data
+playwright-report
+test-results
