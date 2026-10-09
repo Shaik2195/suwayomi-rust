@@ -74,16 +74,13 @@ Each session only touches files within its own crate directory. Session 1 create
   - Deliverables: `/api/graphql` alias, camelCase GraphQL mappings (`isRead`, `thumbnailUrl`, `pageCount`, etc.), root queries (`aboutServer`, `aboutWebUI`, `settings`, `metas`, `downloadStatus`), and `/thumbnail` & `/page/:page` image REST routes.
 
 ## Phase 9: Downloader Event Streaming & WebSocket Feeds (Solo)
-- `[ ]` **Session 11** — Downloader event broadcast, live WebSocket feeds, queue control
-  - Issue: #12
+- `[x]` **Session 11** — Downloader event broadcast, live WebSocket feeds, queue control
+  - Issue: #12 (closed)
   - Session ID: `1188902396460985093`
   - URL: https://jules.google.com/session/1188902396460985093
-  - Status: In Progress
+  - Status: Completed (applied & pushed to `main`)
+  - Deliverables: `DownloadEvent` enum, `broadcast` channels in `DownloadQueue`, real-time JSON streaming over `/ws`, download mutations in GraphQL, and worker pool initialization in `main.rs`.
 
-## Polling
-- Poll interval: every 5 minutes via cron
-- Tool: Jules MCP only (`jules_list_sessions`)
-- No duplicate dispatches
 
 
 
