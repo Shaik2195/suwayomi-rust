@@ -268,7 +268,6 @@ impl MutationRoot {
 
 pub type AppSchema = Schema<QueryRoot, MutationRoot, EmptySubscription>;
 
-use std::sync::Arc;
 pub async fn graphql_handler(
     State(schema): State<AppSchema>,
     req: GraphQLRequest,
