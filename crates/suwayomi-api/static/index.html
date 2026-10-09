@@ -155,6 +155,7 @@
         const query = `
             query {
                 aboutServer {
+                    name
                     version
                     buildTime
                 }
@@ -214,7 +215,9 @@
         function renderServerInfo(aboutServer) {
             if (!aboutServer) return;
             const el = document.getElementById('server-info');
-            el.innerText = `Suwayomi Server Version: ${aboutServer.version || 'Unknown'}`;
+            const name = aboutServer.name || 'Suwayomi Server';
+            const version = aboutServer.version || 'Unknown';
+            el.innerText = `${name} v${version} (Ready)`;
         }
 
         function renderMangas(mangas) {

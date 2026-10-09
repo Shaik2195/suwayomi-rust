@@ -329,6 +329,13 @@ impl QueryRoot {
         Ok(result.into_iter().map(|m| m.into()).collect())
     }
 
+    async fn mangas(&self, ctx: &Context<'_>, _category_id: Option<i64>) -> async_graphql::Result<Vec<Manga>> {
+        let pool = ctx.data::<SqlitePool>()?;
+        let repo = MangaRepository::new(pool);
+        let result = repo.get_library().await?;
+        Ok(result.into_iter().map(|m| m.into()).collect())
+    }
+
     async fn chapters(&self, ctx: &Context<'_>, manga_id: i64) -> async_graphql::Result<Vec<Chapter>> {
         let pool = ctx.data::<SqlitePool>()?;
         let repo = ChapterRepository::new(pool);
