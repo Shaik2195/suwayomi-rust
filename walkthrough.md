@@ -37,6 +37,7 @@ crates/
 | **Phase 3** | Session 5 | `suwayomi-downloader` queue & workers | [#6](https://github.com/Shaik2195/suwayomi-rust/issues/6) | `9448793703678203263` | **Merged** |
 | **Phase 4** | Session 6 | `suwayomi-api` GraphQL & REST router | [#7](https://github.com/Shaik2195/suwayomi-rust/issues/7) | `5459145112336095199` | **Merged** |
 | **Phase 5** | Session 7 | `suwayomi-server` binary entrypoint | [#8](https://github.com/Shaik2195/suwayomi-rust/issues/8) | `280927253613283980` | **Merged** |
+| **Phase 6** | Session 8 | E2E & UI Testing Suite (Playwright) | [#9](https://github.com/Shaik2195/suwayomi-rust/issues/9) | `17580404197599752853` | **Merged** |
 
 ---
 
@@ -50,3 +51,31 @@ crates/
   * Queue and path tests passing in `suwayomi-downloader`.
   * Route and schema tests passing in `suwayomi-api`.
   * Full workspace compilation passing in `suwayomi-server`.
+  * Remote E2E test execution in Jules sandbox passing via `@playwright/test` (GraphQL Playground, POST query execution, REST `/api/v1/category`).
+
+---
+
+### 5. Local Server Execution & Playwright MCP UI Verification
+
+The compiled image `suwayomi-rust:latest` was launched locally using Docker (`--network host`):
+```bash
+docker run -d --name suwayomi --network host -v suwayomi-data:/data suwayomi-rust:latest
+```
+
+Using the official Playwright MCP browser tools, live end-to-end UI testing and visual inspections were performed on `http://127.0.0.1:4567`:
+
+1. **GraphQL Playground Initial View (`GET /graphql`)**:
+   - The single-page application loaded cleanly.
+   - Code editor, execution button, tabs, and documentation drawers initialized in <50ms.
+
+2. **GraphQL Schema Introspection**:
+   - Clicked the **Schema** tab to inspect the live generated schema.
+   - Verified types `Category`, `Chapter`, `Manga`, `QueryRoot`, and `MutationRoot` rendered with syntax highlighting.
+
+3. **Interactive GraphQL Query Execution (`POST /graphql`)**:
+   - Programmatically entered `{ categories { id name } }` into the CodeMirror editor.
+   - Clicked the Play button, receiving `{ "data": { "categories": [] } }` instantly.
+
+4. **REST API Endpoint (`GET /api/v1/category`)**:
+   - Verified direct JSON output `[]` with status `200 OK`.
+
