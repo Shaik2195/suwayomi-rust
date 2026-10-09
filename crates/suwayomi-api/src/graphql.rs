@@ -53,6 +53,7 @@ impl Into<models::MangaStatus> for MangaStatus {
 #[derive(SimpleObject, Clone)]
 pub struct Manga {
     pub id: i64,
+    #[graphql(name = "sourceId")]
     pub source_id: i64,
     pub url: String,
     pub title: String,
@@ -61,9 +62,19 @@ pub struct Manga {
     pub description: Option<String>,
     pub genre: Option<Vec<String>>,
     pub status: MangaStatus,
+    #[graphql(name = "thumbnailUrl")]
     pub thumbnail_url: Option<String>,
     pub update_strategy: i32,
+    #[graphql(name = "isInitialized")]
     pub initialized: bool,
+    #[graphql(name = "inLibrary")]
+    pub in_library: bool,
+    #[graphql(name = "unreadCount")]
+    pub unread_count: i32,
+    #[graphql(name = "downloadCount")]
+    pub download_count: i32,
+    #[graphql(name = "realUrl")]
+    pub real_url: String,
 }
 
 impl From<models::Manga> for Manga {
@@ -71,7 +82,7 @@ impl From<models::Manga> for Manga {
         Self {
             id: manga.id,
             source_id: manga.source_id,
-            url: manga.url,
+            url: manga.url.clone(),
             title: manga.title,
             artist: manga.artist,
             author: manga.author,
@@ -81,6 +92,10 @@ impl From<models::Manga> for Manga {
             thumbnail_url: manga.thumbnail_url,
             update_strategy: manga.update_strategy,
             initialized: manga.initialized,
+            in_library: true, // Defaulting to true for library items, could be based on db if available
+            unread_count: 0,
+            download_count: 0,
+            real_url: manga.url, // Defaulting to url
         }
     }
 }
@@ -107,17 +122,29 @@ impl Into<models::Manga> for Manga {
 #[derive(SimpleObject, Clone)]
 pub struct Chapter {
     pub id: i64,
+    #[graphql(name = "mangaId")]
     pub manga_id: i64,
     pub url: String,
     pub name: String,
+    #[graphql(name = "dateUpload")]
     pub date_upload: i64,
+    #[graphql(name = "chapterNumber")]
     pub chapter_number: f32,
     pub scanlator: Option<String>,
+    #[graphql(name = "isRead")]
     pub read: bool,
+    #[graphql(name = "isBookmarked")]
     pub bookmark: bool,
+    #[graphql(name = "lastPageRead")]
     pub last_page_read: i64,
+    #[graphql(name = "dateFetch")]
     pub date_fetch: i64,
+    #[graphql(name = "sourceOrder")]
     pub source_order: i64,
+    #[graphql(name = "pageCount")]
+    pub page_count: i32,
+    #[graphql(name = "isDownloaded")]
+    pub is_downloaded: bool,
 }
 
 impl From<models::Chapter> for Chapter {
@@ -135,6 +162,8 @@ impl From<models::Chapter> for Chapter {
             last_page_read: chapter.last_page_read,
             date_fetch: chapter.date_fetch,
             source_order: chapter.source_order,
+            page_count: 0,
+            is_downloaded: false,
         }
     }
 }
@@ -189,10 +218,86 @@ impl Into<models::Category> for Category {
 }
 
 
+#[derive(SimpleObject)]
+pub struct AboutServerPayload {
+    pub name: String,
+    pub version: String,
+    pub build_time: String,
+    pub build_type: String,
+    pub discord: String,
+    pub github: String,
+}
+
+#[derive(SimpleObject)]
+pub struct AboutWebUI {
+    pub channel: String,
+    pub tag: String,
+    pub update_timestamp: String,
+}
+
+#[derive(SimpleObject)]
+pub struct Setting {
+    pub key: String,
+    pub value: String,
+}
+
+#[derive(SimpleObject)]
+pub struct Meta {
+    pub key: String,
+    pub value: String,
+}
+
+#[derive(SimpleObject)]
+pub struct DownloadStatusPayload {
+    pub queued: i32,
+    pub downloading: i32,
+    pub downloaded: i32,
+    pub error: i32,
+}
+
 pub struct QueryRoot;
 
 #[Object]
 impl QueryRoot {
+    #[graphql(name = "aboutServer")]
+    async fn about_server(&self) -> async_graphql::Result<AboutServerPayload> {
+        Ok(AboutServerPayload {
+            name: "Suwayomi-Rust".to_string(),
+            version: "0.1.0".to_string(),
+            build_time: "unknown".to_string(),
+            build_type: "debug".to_string(),
+            discord: "".to_string(),
+            github: "https://github.com/Shaik2195/suwayomi-rust".to_string(),
+        })
+    }
+
+    #[graphql(name = "aboutWebUI")]
+    async fn about_web_ui(&self) -> async_graphql::Result<AboutWebUI> {
+        Ok(AboutWebUI {
+            channel: "stable".to_string(),
+            tag: "latest".to_string(),
+            update_timestamp: "unknown".to_string(),
+        })
+    }
+
+    async fn settings(&self) -> async_graphql::Result<Vec<Setting>> {
+        Ok(vec![])
+    }
+
+    async fn metas(&self) -> async_graphql::Result<Vec<Meta>> {
+        Ok(vec![])
+    }
+
+    #[graphql(name = "downloadStatus")]
+    async fn download_status(&self) -> async_graphql::Result<DownloadStatusPayload> {
+        Ok(DownloadStatusPayload {
+            queued: 0,
+            downloading: 0,
+            downloaded: 0,
+            error: 0,
+        })
+    }
+
     async fn manga(&self, ctx: &Context<'_>, id: i64) -> async_graphql::Result<Option<Manga>> {
         let pool = ctx.data::<SqlitePool>()?;
         let repo = MangaRepository::new(pool);

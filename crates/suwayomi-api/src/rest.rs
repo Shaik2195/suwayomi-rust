@@ -20,6 +20,32 @@ pub async fn get_manga(
     }
 }
 
+pub async fn get_manga_thumbnail(
+    State(_pool): State<SqlitePool>,
+    Path(_id): Path<i64>,
+) -> Result<impl IntoResponse, StatusCode> {
+    // Return a placeholder for now
+    let placeholder = vec![];
+    Ok((
+        axum::http::StatusCode::OK,
+        [(axum::http::header::CONTENT_TYPE, "image/png")],
+        placeholder,
+    ))
+}
+
+pub async fn get_chapter_page(
+    State(_pool): State<SqlitePool>,
+    Path((_manga_id, _chapter_id, _page)): Path<(i64, i64, i32)>,
+) -> Result<impl IntoResponse, StatusCode> {
+    // Return a placeholder for now
+    let placeholder = vec![];
+    Ok((
+        axum::http::StatusCode::OK,
+        [(axum::http::header::CONTENT_TYPE, "image/png")],
+        placeholder,
+    ))
+}
+
 pub async fn get_manga_chapters(
     State(pool): State<SqlitePool>,
     Path(id): Path<i64>,

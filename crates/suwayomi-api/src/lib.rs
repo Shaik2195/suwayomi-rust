@@ -21,13 +21,16 @@ pub struct AppState {
 pub fn create_router(state: AppState) -> Router {
     let api_routes = Router::new()
         .route("/manga/:id", get(rest::get_manga))
+        .route("/manga/:id/thumbnail", get(rest::get_manga_thumbnail))
         .route("/manga/:id/chapters", get(rest::get_manga_chapters))
+        .route("/manga/:manga_id/chapter/:chapter_id/page/:page", get(rest::get_chapter_page))
         .route("/chapter/:id", get(rest::get_chapter))
         .route("/category", get(rest::get_categories))
         .with_state(state.pool.clone());
 
     Router::new()
         .route("/graphql", post(graphql::graphql_handler).get(graphql::graphql_playground))
+        .route("/api/graphql", post(graphql::graphql_handler).get(graphql::graphql_playground))
         .route("/ws", get(ws::ws_handler))
         .nest("/api/v1", api_routes)
         .layer(middleware::setup_cors())
