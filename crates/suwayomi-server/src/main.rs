@@ -47,9 +47,26 @@ async fn main() -> anyhow::Result<()> {
     suwayomi_db::migrations::run_migrations(&pool).await?;
 
     // Build API router
-    let schema = suwayomi_api::create_schema(pool.clone());
-    let state = AppState { pool, schema };
+    let download_queue = suwayomi_downloader::queue::DownloadQueue::new();
+    let schema = suwayomi_api::create_schema(pool.clone(), download_queue.clone());
+    let state = AppState { pool: pool.clone(), schema, download_queue: download_queue.clone() };
     let app = suwayomi_api::create_router(state);
+
+    // Start background download workers
+    let storage = suwayomi_downloader::storage::ChapterStorage::new(&data_dir.join("downloads"));
+    
+    // We instantiate a generic JsExtensionRuntime and JsMangaSource just to satisfy the downloader worker pool compilation
+    // In a real application, the source instance is retrieved dynamically per chapter/manga based on source_id
+    let runtime = suwayomi_extensions::runtime::JsExtensionRuntime::new();
+    let dummy_source = std::sync::Arc::new(suwayomi_extensions::runtime::JsMangaSource::new(runtime));
+    
+    let worker_pool = suwayomi_downloader::worker::DownloadWorkerPool::new(
+        download_queue.clone(),
+        storage,
+        std::sync::Arc::new(pool),
+        dummy_source,
+    );
+    worker_pool.start(4).await;
 
     // Bind tokio::net::TcpListener
     let addr = format!("{}:{}", args.bind, args.port);

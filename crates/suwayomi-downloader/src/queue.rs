@@ -1,13 +1,13 @@
 use std::collections::VecDeque;
 use std::sync::Arc;
 use tokio::sync::{broadcast, RwLock};
-use suwayomi_core::models::{DownloadQueueItem, DownloadStatus};
+use suwayomi_core::models::{DownloadQueueItem, DownloadStatus, DownloadEvent};
 
 #[derive(Clone)]
 pub struct DownloadQueue {
     queue: Arc<RwLock<VecDeque<DownloadQueueItem>>>,
     is_paused: Arc<RwLock<bool>>,
-    progress_tx: broadcast::Sender<DownloadQueueItem>,
+    progress_tx: broadcast::Sender<DownloadEvent>,
 }
 
 impl DownloadQueue {
@@ -20,8 +20,12 @@ impl DownloadQueue {
         }
     }
 
-    pub fn subscribe(&self) -> broadcast::Receiver<DownloadQueueItem> {
+    pub fn subscribe(&self) -> broadcast::Receiver<DownloadEvent> {
         self.progress_tx.subscribe()
+    }
+
+    pub async fn emit_event(&self, event: DownloadEvent) {
+        let _ = self.progress_tx.send(event);
     }
 
     pub async fn enqueue(&self, item: DownloadQueueItem) {
@@ -33,7 +37,7 @@ impl DownloadQueue {
             // In a real priority queue, we'd sort by some rank, here we enqueue at back
             // but can move things around.
             q.push_back(item.clone());
-            let _ = self.progress_tx.send(item);
+            let _ = self.progress_tx.send(DownloadEvent::Enqueued(item));
         }
     }
 
@@ -46,7 +50,7 @@ impl DownloadQueue {
         let mut q = self.queue.write().await;
         if let Some(mut item) = q.pop_front() {
             item.status = DownloadStatus::Downloading;
-            let _ = self.progress_tx.send(item.clone());
+            let _ = self.progress_tx.send(DownloadEvent::Started(item.clone()));
             Some(item)
         } else {
             None
@@ -58,7 +62,6 @@ impl DownloadQueue {
         for item in q.iter_mut() {
             if item.chapter_id == chapter_id {
                 item.status = status.clone();
-                let _ = self.progress_tx.send(item.clone());
                 break;
             }
         }
@@ -78,10 +81,12 @@ impl DownloadQueue {
 
     pub async fn pause(&self) {
         *self.is_paused.write().await = true;
+        let _ = self.progress_tx.send(DownloadEvent::Paused);
     }
 
     pub async fn resume(&self) {
         *self.is_paused.write().await = false;
+        let _ = self.progress_tx.send(DownloadEvent::Resumed);
     }
 
     pub async fn is_paused(&self) -> bool {

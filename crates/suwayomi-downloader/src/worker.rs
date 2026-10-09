@@ -63,12 +63,15 @@ impl DownloadWorkerPool {
         source: Arc<dyn MangaSource>,
         client: Client,
     ) {
+        use suwayomi_core::models::DownloadEvent;
+        
         info!("Worker {} started", worker_id);
         loop {
             if let Some(item) = queue.dequeue().await {
                 info!("Worker {} processing chapter {}", worker_id, item.chapter_id);
                 
                 let result = Self::process_download(
+                    &queue,
                     &storage,
                     &pool,
                     &source,
@@ -80,11 +83,16 @@ impl DownloadWorkerPool {
                 match result {
                     Ok(_) => {
                         queue.update_status(item.chapter_id, DownloadStatus::Downloaded).await;
+                        queue.emit_event(DownloadEvent::Completed(item.chapter_id)).await;
                         info!("Worker {} finished chapter {}", worker_id, item.chapter_id);
                     }
                     Err(e) => {
                         error!("Worker {} failed chapter {}: {}", worker_id, item.chapter_id, e);
                         queue.update_status(item.chapter_id, DownloadStatus::Error).await;
+                        queue.emit_event(DownloadEvent::Failed {
+                            item_id: item.chapter_id,
+                            error: e.to_string(),
+                        }).await;
                     }
                 }
             } else {
@@ -94,6 +102,7 @@ impl DownloadWorkerPool {
     }
 
     async fn process_download(
+        queue: &DownloadQueue,
         storage: &ChapterStorage,
         pool: &SqlitePool,
         source: &Arc<dyn MangaSource>,
@@ -101,6 +110,8 @@ impl DownloadWorkerPool {
         manga_id: i64,
         chapter_id: i64,
     ) -> suwayomi_core::error::Result<()> {
+        use suwayomi_core::models::DownloadEvent;
+
         let manga_repo = MangaRepository::new(pool);
         let chapter_repo = ChapterRepository::new(pool);
 
@@ -111,8 +122,15 @@ impl DownloadWorkerPool {
             .ok_or_else(|| suwayomi_core::error::SuwayomiError::NotFound(format!("Chapter {}", chapter_id)))?;
 
         let pages = source.get_page_list(&chapter).await?;
+        let total_pages = pages.len() as i32;
         
-        for page in pages {
+        for (idx, page) in pages.into_iter().enumerate() {
+            queue.emit_event(DownloadEvent::Progress {
+                item_id: chapter_id,
+                page: idx as i32,
+                total_pages,
+            }).await;
+            
             let image_url = page.image_url.clone().unwrap_or(page.url.clone());
             
             let response = client.get(&image_url).send().await

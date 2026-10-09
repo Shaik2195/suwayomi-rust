@@ -289,12 +289,29 @@ impl QueryRoot {
     }
 
     #[graphql(name = "downloadStatus")]
-    async fn download_status(&self) -> async_graphql::Result<DownloadStatusPayload> {
+    async fn download_status(&self, ctx: &Context<'_>) -> async_graphql::Result<DownloadStatusPayload> {
+        let queue = ctx.data::<suwayomi_downloader::queue::DownloadQueue>()?;
+        let all_items = queue.get_all().await;
+        
+        let mut queued = 0;
+        let mut downloading = 0;
+        let mut downloaded = 0;
+        let mut error = 0;
+
+        for item in all_items {
+            match item.status {
+                suwayomi_core::models::DownloadStatus::Queued => queued += 1,
+                suwayomi_core::models::DownloadStatus::Downloading => downloading += 1,
+                suwayomi_core::models::DownloadStatus::Downloaded => downloaded += 1,
+                suwayomi_core::models::DownloadStatus::Error => error += 1,
+            }
+        }
+
         Ok(DownloadStatusPayload {
-            queued: 0,
-            downloading: 0,
-            downloaded: 0,
-            error: 0,
+            queued,
+            downloading,
+            downloaded,
+            error,
         })
     }
 
@@ -367,6 +384,41 @@ impl MutationRoot {
         let pool = ctx.data::<SqlitePool>()?;
         let repo = CategoryRepository::new(pool);
         repo.delete_category(id).await?;
+        Ok(true)
+    }
+
+    #[graphql(name = "downloadChapter")]
+    async fn download_chapter(&self, ctx: &Context<'_>, chapter_id: i64) -> async_graphql::Result<bool> {
+        let pool = ctx.data::<SqlitePool>()?;
+        let chapter_repo = ChapterRepository::new(pool);
+        
+        let chapter = chapter_repo.get_by_id(chapter_id).await?
+            .ok_or_else(|| async_graphql::Error::new(format!("Chapter {} not found", chapter_id)))?;
+            
+        let queue = ctx.data::<suwayomi_downloader::queue::DownloadQueue>()?;
+        
+        let item = suwayomi_core::models::DownloadQueueItem {
+            chapter_id: chapter.id,
+            manga_id: chapter.manga_id,
+            status: suwayomi_core::models::DownloadStatus::Queued,
+        };
+        
+        queue.enqueue(item).await;
+        
+        Ok(true)
+    }
+    
+    #[graphql(name = "pauseDownloads")]
+    async fn pause_downloads(&self, ctx: &Context<'_>) -> async_graphql::Result<bool> {
+        let queue = ctx.data::<suwayomi_downloader::queue::DownloadQueue>()?;
+        queue.pause().await;
+        Ok(true)
+    }
+    
+    #[graphql(name = "resumeDownloads")]
+    async fn resume_downloads(&self, ctx: &Context<'_>) -> async_graphql::Result<bool> {
+        let queue = ctx.data::<suwayomi_downloader::queue::DownloadQueue>()?;
+        queue.resume().await;
         Ok(true)
     }
 }

@@ -197,3 +197,14 @@ mod tests {
         assert_eq!(chapter, deserialized);
     }
 }
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub enum DownloadEvent {
+    Enqueued(DownloadQueueItem),
+    Started(DownloadQueueItem),
+    Progress { item_id: i64, page: i32, total_pages: i32 },
+    Completed(i64),
+    Failed { item_id: i64, error: String },
+    Paused,
+    Resumed,
+}

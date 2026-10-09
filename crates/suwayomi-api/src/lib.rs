@@ -9,6 +9,7 @@ use axum::{
     Router,
 };
 use sqlx::SqlitePool;
+use suwayomi_downloader::queue::DownloadQueue;
 
 use crate::graphql::{AppSchema, MutationRoot, QueryRoot};
 
@@ -16,6 +17,7 @@ use crate::graphql::{AppSchema, MutationRoot, QueryRoot};
 pub struct AppState {
     pub pool: SqlitePool,
     pub schema: AppSchema,
+    pub download_queue: DownloadQueue,
 }
 
 pub fn create_router(state: AppState) -> Router {
@@ -28,10 +30,12 @@ pub fn create_router(state: AppState) -> Router {
         .route("/category", get(rest::get_categories))
         .with_state(state.pool.clone());
 
+    let ws_state = state.download_queue.clone();
+
     Router::new()
         .route("/graphql", post(graphql::graphql_handler).get(graphql::graphql_playground))
         .route("/api/graphql", post(graphql::graphql_handler).get(graphql::graphql_playground))
-        .route("/ws", get(ws::ws_handler))
+        .route("/ws", get(ws::ws_handler).with_state(ws_state))
         .nest("/api/v1", api_routes)
         .layer(middleware::setup_cors())
         .layer(middleware::setup_tracing())
@@ -39,8 +43,9 @@ pub fn create_router(state: AppState) -> Router {
         .with_state(state.schema.clone())
 }
 
-pub fn create_schema(pool: SqlitePool) -> AppSchema {
+pub fn create_schema(pool: SqlitePool, download_queue: DownloadQueue) -> AppSchema {
     Schema::build(QueryRoot, MutationRoot, EmptySubscription)
         .data(pool)
+        .data(download_queue)
         .finish()
 }

@@ -1,44 +1,54 @@
 use axum::{
+    extract::State,
     extract::ws::{Message, WebSocket, WebSocketUpgrade},
     response::IntoResponse,
 };
-use tracing::{debug, error};
+use futures::{SinkExt, StreamExt};
+use tracing::debug;
+use suwayomi_downloader::queue::DownloadQueue;
 
-pub async fn ws_handler(ws: WebSocketUpgrade) -> impl IntoResponse {
-    ws.on_upgrade(handle_socket)
+pub async fn ws_handler(
+    ws: WebSocketUpgrade,
+    State(queue): State<DownloadQueue>,
+) -> impl IntoResponse {
+    ws.on_upgrade(move |socket| handle_socket(socket, queue))
 }
 
-async fn handle_socket(mut socket: WebSocket) {
+async fn handle_socket(socket: WebSocket, queue: DownloadQueue) {
     debug!("Client connected via WebSocket");
 
-    // In a real application, you would hook this up to a broadcast channel
-    // to stream real-time progress updates. Here we just echo back messages
-    // or handle basic ping/pong to keep the connection alive.
-    while let Some(msg) = socket.recv().await {
-        if let Ok(msg) = msg {
-            match msg {
-                Message::Text(t) => {
-                    debug!("Received text message: {}", t);
-                    // Echo back for now
-                    if socket.send(Message::Text(t)).await.is_err() {
-                        error!("Client disconnected");
-                        return;
-                    }
-                }
-                Message::Binary(_) => {
-                    debug!("Received binary message");
-                }
-                Message::Ping(_) | Message::Pong(_) => {
-                    // Handled automatically by axum
-                }
-                Message::Close(_) => {
-                    debug!("Client disconnected");
-                    return;
+    let (mut sender, mut receiver) = socket.split();
+    let mut subscriber = queue.subscribe();
+
+    let mut send_task = tokio::spawn(async move {
+        while let Ok(event) = subscriber.recv().await {
+            if let Ok(msg) = serde_json::to_string(&event) {
+                if sender.send(Message::Text(msg)).await.is_err() {
+                    break;
                 }
             }
-        } else {
-            error!("Client disconnected");
-            return;
         }
-    }
+    });
+
+    let mut recv_task = tokio::spawn(async move {
+        while let Some(Ok(msg)) = receiver.next().await {
+            match msg {
+                Message::Ping(_) => {
+                    // We shouldn't need to manually send pong if axum handles it, 
+                    // but we can just ignore ping/pong manually here or process text
+                }
+                Message::Close(_) => {
+                    break;
+                }
+                _ => {}
+            }
+        }
+    });
+
+    tokio::select! {
+        _ = &mut send_task => recv_task.abort(),
+        _ = &mut recv_task => send_task.abort(),
+    };
+
+    debug!("Client disconnected");
 }
