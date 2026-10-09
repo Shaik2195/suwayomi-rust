@@ -2,6 +2,7 @@ pub mod graphql;
 pub mod rest;
 pub mod middleware;
 pub mod ws;
+pub mod static_files;
 
 use async_graphql::{EmptySubscription, Schema};
 use axum::{
@@ -37,6 +38,7 @@ pub fn create_router(state: AppState) -> Router {
         .route("/api/graphql", post(graphql::graphql_handler).get(graphql::graphql_playground))
         .route("/ws", get(ws::ws_handler).with_state(ws_state))
         .nest("/api/v1", api_routes)
+        .fallback(static_files::static_handler)
         .layer(middleware::setup_cors())
         .layer(middleware::setup_tracing())
         .layer(middleware::setup_compression())

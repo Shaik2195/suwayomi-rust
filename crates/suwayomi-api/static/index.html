@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Suwayomi - WebUI</title>
+    <style>
+        :root {
+            --bg-color: #121212;
+            --surface-color: #1e1e1e;
+            --primary-color: #bb86fc;
+            --text-primary: #ffffff;
+            --text-secondary: #b3b3b3;
+            --border-color: #333333;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+        }
+
+        header {
+            background-color: var(--surface-color);
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--border-color);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .brand {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: var(--primary-color);
+            text-decoration: none;
+        }
+
+        nav {
+            display: flex;
+            gap: 1.5rem;
+        }
+
+        nav a {
+            color: var(--text-primary);
+            text-decoration: none;
+            font-weight: 500;
+            transition: color 0.2s;
+        }
+
+        nav a:hover, nav a.active {
+            color: var(--primary-color);
+        }
+
+        main {
+            padding: 2rem;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .server-info {
+            background-color: var(--surface-color);
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 2rem;
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+        }
+
+        .manga-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .manga-card {
+            background-color: var(--surface-color);
+            border-radius: 8px;
+            overflow: hidden;
+            transition: transform 0.2s;
+            cursor: pointer;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .manga-card:hover {
+            transform: translateY(-4px);
+        }
+
+        .manga-cover {
+            width: 100%;
+            height: 250px;
+            object-fit: cover;
+            background-color: #2a2a2a;
+        }
+
+        .manga-info {
+            padding: 1rem;
+        }
+
+        .manga-title {
+            font-weight: bold;
+            font-size: 1rem;
+            margin: 0 0 0.5rem 0;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .manga-author {
+            color: var(--text-secondary);
+            font-size: 0.8rem;
+            margin: 0;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <a href="/" class="brand">Suwayomi</a>
+        <nav>
+            <a href="/library" class="active" onclick="navigate(event, '/library')">Library</a>
+            <a href="/updates" onclick="navigate(event, '/updates')">Updates</a>
+            <a href="/browse" onclick="navigate(event, '/browse')">Browse</a>
+            <a href="/settings" onclick="navigate(event, '/settings')">Settings</a>
+        </nav>
+    </header>
+
+    <main>
+        <div id="server-info" class="server-info">Connecting to server...</div>
+        
+        <h2>Library</h2>
+        <div id="manga-grid" class="manga-grid">
+            <!-- Manga cards will be rendered here -->
+        </div>
+    </main>
+
+    <script>
+        // Utility to escape HTML and prevent XSS
+        function escapeHtml(unsafe) {
+            if (!unsafe) return '';
+            return unsafe
+                .toString()
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
+
+        // GraphQL Query
+        const query = `
+            query {
+                aboutServer {
+                    version
+                    buildTime
+                }
+                categories {
+                    id
+                    name
+                    order
+                }
+                mangas(categoryId: null) {
+                    id
+                    title
+                    author
+                    thumbnailUrl
+                }
+            }
+        `;
+
+        async function fetchLibraryData() {
+            try {
+                // Try /api/graphql first, fallback to /graphql if needed
+                let endpoint = '/api/graphql';
+                
+                let response = await fetch(endpoint, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ query })
+                });
+
+                if (!response.ok) {
+                    endpoint = '/graphql';
+                    response = await fetch(endpoint, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({ query })
+                    });
+                }
+
+                const result = await response.json();
+                
+                if (result.data) {
+                    renderServerInfo(result.data.aboutServer);
+                    renderMangas(result.data.mangas);
+                } else if (result.errors) {
+                    console.error('GraphQL errors:', result.errors);
+                    document.getElementById('server-info').innerText = 'Error loading data from server.';
+                }
+            } catch (error) {
+                console.error('Error fetching data:', error);
+                document.getElementById('server-info').innerText = 'Failed to connect to server.';
+            }
+        }
+
+        function renderServerInfo(aboutServer) {
+            if (!aboutServer) return;
+            const el = document.getElementById('server-info');
+            el.innerText = `Suwayomi Server Version: ${aboutServer.version || 'Unknown'}`;
+        }
+
+        function renderMangas(mangas) {
+            const grid = document.getElementById('manga-grid');
+            if (!mangas || mangas.length === 0) {
+                grid.innerHTML = '<p>No manga found in library.</p>';
+                return;
+            }
+
+            grid.innerHTML = mangas.map(manga => {
+                const title = escapeHtml(manga.title);
+                const author = escapeHtml(manga.author || 'Unknown');
+                const thumbnailUrl = escapeHtml(manga.thumbnailUrl || `/api/v1/manga/${manga.id}/thumbnail`);
+                const id = escapeHtml(manga.id);
+                
+                return `
+                <div class="manga-card" onclick="navigate(event, '/manga/${id}')">
+                    <img class="manga-cover" src="${thumbnailUrl}" alt="${title}" onerror="this.src='data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiPjxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbGw9IiMyYTJhMmEiLz48L3N2Zz4='">
+                    <div class="manga-info">
+                        <h3 class="manga-title" title="${title}">${title}</h3>
+                        <p class="manga-author">${author}</p>
+                    </div>
+                </div>
+            `}).join('');
+        }
+
+        // Simple SPA router fallback
+        function navigate(event, path) {
+            event.preventDefault();
+            window.history.pushState({}, '', path);
+            updateNav();
+            
+            // In a real SPA, we would render different views here
+            // For now, just log the navigation
+            console.log('Navigated to:', path);
+        }
+
+        function updateNav() {
+            const path = window.location.pathname;
+            document.querySelectorAll('nav a').forEach(a => {
+                if (a.getAttribute('href') === path || 
+                   (path === '/' && a.getAttribute('href') === '/library')) {
+                    a.classList.add('active');
+                } else {
+                    a.classList.remove('active');
+                }
+            });
+        }
+
+        // Handle browser back/forward buttons
+        window.addEventListener('popstate', updateNav);
+
+        // Initial load
+        document.addEventListener('DOMContentLoaded', () => {
+            updateNav();
+            fetchLibraryData();
+        });
+    </script>
+</body>
+</html>

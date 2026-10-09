@@ -3908,6 +3908,8 @@ dependencies = [
  "async-graphql-axum",
  "axum",
  "futures",
+ "http-body-util",
+ "mime_guess",
  "rust-embed",
  "serde",
  "serde_json",
@@ -3916,7 +3918,9 @@ dependencies = [
  "suwayomi-db",
  "suwayomi-downloader",
  "suwayomi-extensions",
+ "tempfile",
  "tokio",
+ "tower",
  "tower-http 0.5.2",
  "tracing",
 ]
