@@ -58,15 +58,12 @@ Each session only touches files within its own crate directory. Session 1 create
   - Local Playwright Verification: Tested live via Playwright MCP (`browser_navigate`, `browser_snapshot`, `browser_take_screenshot`). Verified GraphQL Playground UI, interactive query execution, schema introspection, and REST `/api/v1/category`.
 
 ## Phase 7: Architectural Review & Gap Analysis (Solo)
-- `[ ]` **Session 9** — Architectural review of Suwayomi-Server + Tachidesk-WebUI vs suwayomi-rust
-  - Issue: #10
+- `[x]` **Session 9** — Architectural review of Suwayomi-Server + Tachidesk-WebUI vs suwayomi-rust
+  - Issue: #10 (closed)
   - Session ID: `10033699167618502008`
   - URL: https://jules.google.com/session/10033699167618502008
-  - Status: In Progress
+  - Status: Completed (docs/ARCHITECTURE_REVIEW.md created)
+  - Deliverable: Comprehensive subsystem review, Mermaid diagram, gap matrix, and 4-phase technical roadmap.
 
-## Polling
-- Poll interval: every 5 minutes via cron
-- Tool: Jules MCP only (`jules_list_sessions`)
-- No duplicate dispatches
 
 
