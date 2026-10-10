@@ -30,7 +30,7 @@ pub fn create_router(state: AppState) -> Router {
         .route("/manga/:manga_id/chapter/:chapter_id/page/:page", get(rest::get_chapter_page))
         .route("/chapter/:id", get(rest::get_chapter))
         .route("/category", get(rest::get_categories))
-        .with_state(state.pool.clone());
+        .with_state(state.clone());
 
     let ws_state = state.download_queue.clone();
 
