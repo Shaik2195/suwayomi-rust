@@ -142,9 +142,21 @@ struct MangaDetailsData {
     manga: Option<MangaDetails>,
 }
 
+#[derive(Deserialize)]
+struct MangaChaptersOnlyData {
+    manga: Option<MangaChaptersOnly>,
+}
+
+#[derive(Deserialize)]
+struct MangaChaptersOnly {
+    #[serde(rename = "availableChaptersDetail")]
+    available_chapters_detail: Option<AvailableChaptersDetail>,
+}
+
 #[derive(Deserialize, Clone)]
 struct AvailableChaptersDetail {
     sub: Option<Vec<String>>,
+    #[allow(dead_code)]
     raw: Option<Vec<String>>,
 }
 
@@ -162,6 +174,7 @@ struct MangaDetails {
     #[serde(rename = "englishName")]
     #[allow(dead_code)]
     english_name: Option<String>,
+    #[allow(dead_code)]
     #[serde(rename = "availableChaptersDetail")]
     available_chapters_detail: Option<AvailableChaptersDetail>,
 }
@@ -393,7 +406,7 @@ impl MangaSource for AllMangaSource {
         let variables = MangaDetailsVariables { id: id.clone() };
         let request_body = GraphQLQuery { query: graphql_query, variables };
         let response = self.client.post(&self.api_url).json(&request_body).send().await.map_err(|e| suwayomi_core::error::SuwayomiError::Network(e.to_string()))?;
-        let graphql_response: GraphQLResponse<MangaDetailsData> = response.json().await.map_err(|e| suwayomi_core::error::SuwayomiError::Parse(e.to_string()))?;
+        let graphql_response: GraphQLResponse<MangaChaptersOnlyData> = response.json().await.map_err(|e| suwayomi_core::error::SuwayomiError::Parse(e.to_string()))?;
         
         if let Some(data) = graphql_response.data {
             if let Some(details) = data.manga {
@@ -671,6 +684,54 @@ mod tests {
         assert_eq!(chapters.len(), 2);
         assert_eq!(chapters[0].chapter_number, 2.0);
         assert_eq!(chapters[0].url, "/manga/123/chapter-2-sub");
+        assert_eq!(chapters[1].chapter_number, 1.0);
+    }
+
+    #[tokio::test]
+    async fn test_get_chapter_list_fallback_available_chapters() {
+        let server = MockServer::start();
+
+        let _mock1 = server.mock(|when, then| {
+            when.method(POST)
+                .path("/api")
+                .body(r#"{"query":"query ($showId: String!) {\n            episodeInfos(showId: $showId, episodeNumStart: 0, episodeNumEnd: 9999) {\n                episodeIdNum\n                notes\n                uploadDates\n            }\n        }","variables":{"showId":"123"}}"#);
+            then.status(200)
+                .header("content-type", "application/json")
+                .body(r#"{
+                    "data": {
+                        "episodeInfos": []
+                    }
+                }"#);
+        });
+
+        let _mock2 = server.mock(|when, then| {
+            when.method(POST)
+                .path("/api")
+                .body(r#"{"query":"query ($id: String!) {\n            manga(_id: $id) {\n                availableChaptersDetail\n            }\n        }","variables":{"id":"123"}}"#);
+            then.status(200)
+                .header("content-type", "application/json")
+                .body(r#"{
+                    "data": {
+                        "manga": {
+                            "availableChaptersDetail": {
+                                "sub": ["2.5", "1.0"]
+                            }
+                        }
+                    }
+                }"#);
+        });
+
+        let source = AllMangaSource::with_api_url(server.url("/api"));
+        let manga = Manga { id: 1, source_id: AllMangaSource::SOURCE_ID, url: "/manga/123".to_string(), title: "Test".to_string(), artist: None, author: None, description: None, genre: None, status: MangaStatus::Ongoing, thumbnail_url: None, update_strategy: 0, initialized: true };
+
+        let result = source.get_chapter_list(&manga).await;
+        
+        if let Err(e) = &result { println!("Error: {:?}", e); }
+        assert!(result.is_ok());
+        let chapters = result.unwrap();
+        assert_eq!(chapters.len(), 2);
+        assert_eq!(chapters[0].chapter_number, 2.5);
+        assert_eq!(chapters[0].url, "/manga/123/chapter-2.5-sub");
         assert_eq!(chapters[1].chapter_number, 1.0);
     }
 
