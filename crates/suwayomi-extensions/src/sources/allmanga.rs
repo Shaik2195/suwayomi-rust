@@ -315,10 +315,7 @@ impl MangaSource for AllMangaSource {
                 genres
                 status
                 englishName
-                availableChaptersDetail {
-                    sub
-                    raw
-                }
+                availableChaptersDetail
             }
         }";
 
@@ -388,10 +385,7 @@ impl MangaSource for AllMangaSource {
         // Fallback to availableChaptersDetail if episodeInfos is empty
         let graphql_query = "query ($id: String!) {
             manga(_id: $id) {
-                availableChaptersDetail {
-                    sub
-                    raw
-                }
+                availableChaptersDetail
             }
         }";
         
