@@ -395,6 +395,9 @@ impl ExtensionRegistry {
 
 
     pub fn get_source(&self, source_id: i64) -> Option<std::sync::Arc<dyn suwayomi_core::traits::MangaSource>> {
+        if source_id == crate::sources::mangadex::MangaDexSource::SOURCE_ID {
+            return Some(std::sync::Arc::new(crate::sources::mangadex::MangaDexSource::new()));
+        }
         if source_id == crate::sources::allmanga::AllMangaSource::SOURCE_ID {
             return Some(std::sync::Arc::new(crate::sources::allmanga::AllMangaSource::new()));
         }
@@ -402,6 +405,9 @@ impl ExtensionRegistry {
     }
 
     pub fn get_source_by_pkg(&self, pkg_name: &str) -> Option<std::sync::Arc<dyn suwayomi_core::traits::MangaSource>> {
+        if pkg_name == crate::sources::mangadex::MangaDexSource::PKG_NAME {
+            return Some(std::sync::Arc::new(crate::sources::mangadex::MangaDexSource::new()));
+        }
         if pkg_name == crate::sources::allmanga::AllMangaSource::PKG_NAME {
             return Some(std::sync::Arc::new(crate::sources::allmanga::AllMangaSource::new()));
         }

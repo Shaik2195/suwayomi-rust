@@ -454,9 +454,11 @@ impl QueryRoot {
         
         let mut sources = Vec::new();
         for ext in installed {
-            if ext.pkg_name == "eu.kanade.tachiyomi.extension.en.allanime" || registry.get_source_by_pkg(&ext.pkg_name).is_some() {
+            if ext.pkg_name == "eu.kanade.tachiyomi.extension.en.allanime" || ext.pkg_name == "eu.kanade.tachiyomi.extension.all.mangadex" || registry.get_source_by_pkg(&ext.pkg_name).is_some() {
                 let id = if ext.pkg_name == "eu.kanade.tachiyomi.extension.en.allanime" {
                     "8861274191478178487".to_string()
+                } else if ext.pkg_name == "eu.kanade.tachiyomi.extension.all.mangadex" {
+                    "2499283573021221994".to_string()
                 } else {
                     "1".to_string() // Simplified for now since we only have one source
                 };
