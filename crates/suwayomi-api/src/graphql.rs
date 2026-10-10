@@ -92,7 +92,7 @@ impl From<models::Manga> for Manga {
             thumbnail_url: manga.thumbnail_url,
             update_strategy: manga.update_strategy,
             initialized: manga.initialized,
-            in_library: true, // Defaulting to true for library items, could be based on db if available
+            in_library: manga.initialized,
             unread_count: 0,
             download_count: 0,
             real_url: manga.url, // Defaulting to url
@@ -556,6 +556,21 @@ impl MutationRoot {
         let result = registry.uninstall_extension(&pkg_name).await
             .map_err(|e| async_graphql::Error::new(e.to_string()))?;
         Ok(result)
+    }
+
+    #[graphql(name = "updateMangaInLibrary")]
+    async fn update_manga_in_library(
+        &self,
+        ctx: &Context<'_>,
+        id: i64,
+        in_library: bool,
+    ) -> async_graphql::Result<Manga> {
+        let pool = ctx.data::<SqlitePool>()?;
+        let repo = MangaRepository::new(pool);
+        repo.update_in_library(id, in_library).await?;
+        let manga = repo.get_by_id(id).await?
+            .ok_or_else(|| async_graphql::Error::new(format!("Manga {} not found", id)))?;
+        Ok(manga.into())
     }
 
     async fn update_chapter_read(

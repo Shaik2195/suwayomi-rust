@@ -104,6 +104,16 @@ impl<'a> MangaRepository<'a> {
         Ok(rows.iter().map(|r| self.map_row_to_manga(r)).collect())
     }
 
+    pub async fn update_in_library(&self, id: i64, in_library: bool) -> Result<()> {
+        sqlx::query("UPDATE manga SET initialized = ? WHERE id = ?")
+            .bind(in_library)
+            .bind(id)
+            .execute(self.pool)
+            .await
+            .map_err(|e| SuwayomiError::Database(e.to_string()))?;
+        Ok(())
+    }
+
     pub async fn update(&self, manga: &Manga) -> Result<()> {
         let genre_json = match &manga.genre {
             Some(g) => Some(serde_json::to_string(g).map_err(|e| SuwayomiError::Parse(e.to_string()))?),

@@ -1,163 +1,307 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Suwayomi - WebUI</title>
     <style>
-        :root {
-            --bg-color: #121212;
-            --surface-color: #1e1e1e;
-            --primary-color: #bb86fc;
-            --text-primary: #ffffff;
-            --text-secondary: #b3b3b3;
-            --border-color: #333333;
-        }
+      :root {
+        --bg-color: #121212;
+        --surface-color: #1e1e1e;
+        --primary-color: #bb86fc;
+        --text-primary: #ffffff;
+        --text-secondary: #b3b3b3;
+        --border-color: #333333;
+      }
 
-        body {
-            margin: 0;
-            padding: 0;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: var(--bg-color);
-            color: var(--text-primary);
-        }
+      body {
+        margin: 0;
+        padding: 0;
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+        background-color: var(--bg-color);
+        color: var(--text-primary);
+      }
 
-        header {
-            background-color: var(--surface-color);
-            padding: 1rem 2rem;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            border-bottom: 1px solid var(--border-color);
-            position: sticky;
-            top: 0;
-            z-index: 100;
-        }
+      header {
+        background-color: var(--surface-color);
+        padding: 1rem 2rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border-bottom: 1px solid var(--border-color);
+        position: sticky;
+        top: 0;
+        z-index: 100;
+      }
 
-        .brand {
-            font-size: 1.5rem;
-            font-weight: bold;
-            color: var(--primary-color);
-            text-decoration: none;
-        }
+      .brand {
+        font-size: 1.5rem;
+        font-weight: bold;
+        color: var(--primary-color);
+        text-decoration: none;
+      }
 
-        nav {
-            display: flex;
-            gap: 1.5rem;
-        }
+      nav {
+        display: flex;
+        gap: 1.5rem;
+      }
 
-        nav a {
-            color: var(--text-primary);
-            text-decoration: none;
-            font-weight: 500;
-            transition: color 0.2s;
-        }
+      nav a {
+        color: var(--text-primary);
+        text-decoration: none;
+        font-weight: 500;
+        transition: color 0.2s;
+      }
 
-        nav a:hover, nav a.active {
-            color: var(--primary-color);
-        }
+      nav a:hover,
+      nav a.active {
+        color: var(--primary-color);
+      }
 
-        main {
-            padding: 2rem;
-            max-width: 1200px;
-            margin: 0 auto;
-        }
+      main {
+        padding: 2rem;
+        max-width: 1200px;
+        margin: 0 auto;
+      }
 
-        .server-info {
-            background-color: var(--surface-color);
-            padding: 1rem;
-            border-radius: 8px;
-            margin-bottom: 2rem;
-            font-size: 0.9rem;
-            color: var(--text-secondary);
-        }
+      .server-info {
+        background-color: var(--surface-color);
+        padding: 1rem;
+        border-radius: 8px;
+        margin-bottom: 2rem;
+        font-size: 0.9rem;
+        color: var(--text-secondary);
+      }
 
-        .manga-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-            gap: 1.5rem;
-        }
+      .manga-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+        gap: 1.5rem;
+      }
 
-        .manga-card {
-            background-color: var(--surface-color);
-            border-radius: 8px;
-            overflow: hidden;
-            transition: transform 0.2s;
-            cursor: pointer;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-        }
+      .manga-card {
+        background-color: var(--surface-color);
+        border-radius: 8px;
+        overflow: hidden;
+        transition: transform 0.2s;
+        cursor: pointer;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        display: flex;
+        flex-direction: column;
+      }
 
-        .manga-card:hover {
-            transform: translateY(-4px);
-        }
+      .manga-card:hover {
+        transform: translateY(-4px);
+      }
 
-        .manga-cover {
-            width: 100%;
-            height: 250px;
-            object-fit: cover;
-            background-color: #2a2a2a;
-        }
+      .manga-cover {
+        width: 100%;
+        height: 250px;
+        object-fit: cover;
+        background-color: #2a2a2a;
+      }
 
-        .manga-info {
-            padding: 1rem;
-        }
+      .manga-info {
+        padding: 1rem;
+        flex-grow: 1;
+        display: flex;
+        flex-direction: column;
+      }
 
-        .manga-title {
-            font-weight: bold;
-            font-size: 1rem;
-            margin: 0 0 0.5rem 0;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
+      .manga-title {
+        font-weight: bold;
+        font-size: 1rem;
+        margin: 0 0 0.5rem 0;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
 
-        .manga-author {
-            color: var(--text-secondary);
-            font-size: 0.8rem;
-            margin: 0;
-        }
+      .manga-author {
+        color: var(--text-secondary);
+        font-size: 0.8rem;
+        margin: 0;
+        flex-grow: 1;
+      }
+
+      .btn {
+        background: var(--primary-color);
+        color: var(--bg-color);
+        border: none;
+        border-radius: 4px;
+        padding: 0.5rem 1rem;
+        font-weight: bold;
+        cursor: pointer;
+        text-align: center;
+      }
+
+      .btn:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+
+      .btn-outline {
+        background: transparent;
+        color: var(--primary-color);
+        border: 1px solid var(--primary-color);
+      }
+
+      .reader-container {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        background: #000;
+        min-height: 100vh;
+        padding-bottom: 2rem;
+      }
+
+      .reader-topbar {
+        position: sticky;
+        top: 0;
+        width: 100%;
+        background: rgba(30, 30, 30, 0.9);
+        padding: 1rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        z-index: 1000;
+      }
+
+      .reader-image {
+        max-width: 100%;
+        display: block;
+        margin: 0 auto;
+      }
+
+      .chapter-list {
+        margin-top: 2rem;
+      }
+
+      .chapter-item {
+        background: var(--surface-color);
+        padding: 1rem;
+        margin-bottom: 0.5rem;
+        border-radius: 4px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+
+      .browse-nav {
+        display: flex;
+        gap: 1rem;
+        margin-bottom: 1.5rem;
+      }
+
+      .browse-nav a {
+        color: var(--text-secondary);
+        text-decoration: none;
+        padding-bottom: 0.5rem;
+        border-bottom: 2px solid transparent;
+      }
+
+      .browse-nav a.active {
+        color: var(--primary-color);
+        border-bottom-color: var(--primary-color);
+      }
     </style>
-</head>
-<body>
-    <header>
-        <a href="/" class="brand">Suwayomi</a>
-        <nav>
-            <a href="/library" class="active" onclick="navigate(event, '/library')">Library</a>
-            <a href="/updates" onclick="navigate(event, '/updates')">Updates</a>
-            <a href="/browse" onclick="navigate(event, '/browse')">Browse</a>
-            <a href="/settings" onclick="navigate(event, '/settings')">Settings</a>
-        </nav>
+  </head>
+  <body>
+    <header id="main-header">
+      <a href="/" class="brand">Suwayomi</a>
+      <nav>
+        <a href="/library" class="active" onclick="navigate(event, '/library')"
+          >Library</a
+        >
+        <a href="/updates" onclick="navigate(event, '/updates')">Updates</a>
+        <a href="/sources" onclick="navigate(event, '/sources')">Sources</a>
+        <a href="/browse" onclick="navigate(event, '/browse')">Extensions</a>
+        <a href="/settings" onclick="navigate(event, '/settings')">Settings</a>
+      </nav>
     </header>
 
-    <main>
-        <div id="server-info" class="server-info">Connecting to server...</div>
-        
-        <h2 id="view-title">Library</h2>
-        <div id="search-container" style="display: none; margin-bottom: 1.5rem;">
-            <input type="text" id="extension-search" placeholder="Search extensions..." style="padding: 0.5rem; width: 100%; max-width: 400px; border-radius: 4px; border: 1px solid var(--border-color); background: var(--bg-color); color: var(--text-primary);">
-        </div>
-        <div id="content-grid" class="manga-grid">
-            <!-- Content cards will be rendered here -->
-        </div>
+    <main id="main-content">
+      <div id="server-info" class="server-info">Connecting to server...</div>
+
+      <div id="browse-nav-container" class="browse-nav" style="display: none">
+        <a
+          href="#"
+          id="nav-popular"
+          class="active"
+          onclick="switchSourceCatalogTab(event, 'popular')"
+          >Popular</a
+        >
+        <a
+          href="#"
+          id="nav-latest"
+          onclick="switchSourceCatalogTab(event, 'latest')"
+          >Latest</a
+        >
+        <a
+          href="#"
+          id="nav-search"
+          onclick="switchSourceCatalogTab(event, 'search')"
+          >Search</a
+        >
+      </div>
+
+      <h2 id="view-title">Library</h2>
+      <div id="search-container" style="display: none; margin-bottom: 1.5rem">
+        <input
+          type="text"
+          id="search-input"
+          placeholder="Search..."
+          style="
+            padding: 0.5rem;
+            width: 100%;
+            max-width: 400px;
+            border-radius: 4px;
+            border: 1px solid var(--border-color);
+            background: var(--bg-color);
+            color: var(--text-primary);
+          "
+        />
+        <button
+          id="search-btn"
+          class="btn"
+          style="margin-left: 0.5rem; display: none"
+        >
+          Search
+        </button>
+      </div>
+
+      <div id="content-grid" class="manga-grid">
+        <!-- Content cards will be rendered here -->
+      </div>
+
+      <div id="details-view" style="display: none">
+        <!-- Manga Details will be rendered here -->
+      </div>
     </main>
 
-    <script>
-        let allExtensions = [];
-        
-        // Utility to escape HTML and prevent XSS
-        function escapeHtml(unsafe) {
-            if (!unsafe) return '';
-            return unsafe
-                .toString()
-                .replace(/&/g, "&amp;")
-                .replace(/</g, "&lt;")
-                .replace(/>/g, "&gt;")
-                .replace(/"/g, "&quot;")
-                .replace(/'/g, "&#039;");
-        }
+    <div id="reader-view" class="reader-container" style="display: none">
+      <!-- Reader will be rendered here -->
+    </div>
 
-        // GraphQL Query
-        const libraryQuery = `
+    <script>
+      let allExtensions = [];
+      let currentSourceId = null;
+      let currentCatalogType = "popular";
+      let currentSearchQuery = "";
+
+      // Utility to escape HTML and prevent XSS
+      function escapeHtml(unsafe) {
+        if (!unsafe) return "";
+        return unsafe
+          .toString()
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;")
+          .replace(/'/g, "&#039;");
+      }
+
+      const libraryQuery = `
             query {
                 aboutServer {
                     name
@@ -173,7 +317,7 @@
             }
         `;
 
-        const extensionsQuery = `
+      const extensionsQuery = `
             query {
                 availableExtensions {
                     pkgName
@@ -189,149 +333,371 @@
             }
         `;
 
-        async function graphQLRequest(query) {
-            let endpoint = '/api/graphql';
-            let response = await fetch(endpoint, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ query })
+      const sourcesQuery = `
+            query {
+                sources {
+                    id
+                    name
+                    lang
+                    displayName
+                }
+            }
+        `;
+
+      async function graphQLRequest(query, variables = {}) {
+        let endpoint = "/api/graphql";
+        let response = await fetch(endpoint, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ query, variables }),
+        });
+
+        if (!response.ok) {
+          endpoint = "/graphql";
+          response = await fetch(endpoint, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ query, variables }),
+          });
+        }
+        return await response.json();
+      }
+
+      async function fetchLibraryData() {
+        try {
+          const result = await graphQLRequest(libraryQuery);
+          if (result.data) {
+            renderServerInfo(result.data.aboutServer);
+            renderMangas(result.data.mangas, false);
+          }
+        } catch (error) {
+          console.error("Error fetching data:", error);
+          document.getElementById("server-info").innerText =
+            "Failed to connect to server.";
+        }
+      }
+
+      async function fetchExtensionsData() {
+        try {
+          document.getElementById("content-grid").innerHTML =
+            "<p>Loading extensions...</p>";
+          const result = await graphQLRequest(extensionsQuery);
+
+          if (result.data) {
+            allExtensions = result.data.availableExtensions || [];
+            const installedExtensions = result.data.installedExtensions || [];
+            window.installedPkgNames = new Set(
+              installedExtensions.map((e) => e.pkgName),
+            );
+            renderExtensions(allExtensions);
+          }
+        } catch (error) {
+          console.error("Error fetching extensions:", error);
+          document.getElementById("server-info").innerText =
+            "Failed to load extensions.";
+        }
+      }
+
+      async function fetchSourcesData() {
+        try {
+          document.getElementById("content-grid").innerHTML =
+            "<p>Loading sources...</p>";
+          const result = await graphQLRequest(sourcesQuery);
+          if (result.data) {
+            renderSources(result.data.sources || []);
+          }
+        } catch (error) {
+          console.error("Error fetching sources:", error);
+          document.getElementById("content-grid").innerHTML =
+            "<p>Failed to load sources.</p>";
+        }
+      }
+
+      async function fetchSourceCatalog(sourceId, type, query = "") {
+        try {
+          document.getElementById("content-grid").innerHTML =
+            "<p>Loading manga...</p>";
+
+          const q = `
+                    query sourceManga($sourceId: String!, $type: String!, $page: Int!, $query: String) {
+                        sourceManga(sourceId: $sourceId, typeName: $type, page: 1, query: $query) {
+                            mangas {
+                                id
+                                title
+                                author
+                                url
+                                thumbnailUrl
+                                inLibrary
+                            }
+                            hasNextPage
+                        }
+                    }
+                `;
+
+          const variables = {
+            sourceId: sourceId,
+            type: type,
+            page: 1,
+            query: query === "" ? null : query,
+          };
+
+          const result = await graphQLRequest(q, variables);
+          if (result.data && result.data.sourceManga) {
+            renderCatalogMangas(result.data.sourceManga.mangas, sourceId);
+          } else if (result.errors) {
+            document.getElementById("content-grid").innerHTML =
+              `<p>Error: ${escapeHtml(result.errors[0].message)}</p>`;
+          }
+        } catch (error) {
+          console.error("Error fetching catalog:", error);
+          document.getElementById("content-grid").innerHTML =
+            "<p>Failed to load catalog.</p>";
+        }
+      }
+
+      async function fetchMangaDetails(id) {
+        try {
+          const q = `
+                    query mangaDetails($id: Int!) {
+                        manga(id: $id) {
+                            id
+                            title
+                            author
+                            artist
+                            description
+                            thumbnailUrl
+                            inLibrary
+                            status
+                            sourceId
+                        }
+                        chapters(mangaId: $id) {
+                            id
+                            name
+                            chapterNumber
+                            dateUpload
+                        }
+                    }
+                `;
+          const result = await graphQLRequest(q, { id: parseInt(id) });
+          if (result.data && result.data.manga) {
+            renderMangaDetails(result.data.manga, result.data.chapters);
+          }
+        } catch (error) {
+          console.error("Error fetching manga details:", error);
+        }
+      }
+
+      async function installExtension(pkgName) {
+        const btn = document.getElementById(
+          `ext-btn-${pkgName.replace(/\./g, "-")}`,
+        );
+        if (btn) {
+          btn.innerText = "Installing...";
+          btn.disabled = true;
+        }
+        try {
+          const mutation = `mutation { installExtension(pkgName: "${pkgName}") { pkgName name } }`;
+          const result = await graphQLRequest(mutation);
+          if (result.data && result.data.installExtension) {
+            if (!window.installedPkgNames) window.installedPkgNames = new Set();
+            window.installedPkgNames.add(pkgName);
+            renderExtensions(allExtensions);
+          } else {
+            alert(
+              "Install failed: " +
+                (result.errors ? result.errors[0].message : "Unknown error"),
+            );
+            if (btn) {
+              btn.innerText = "Install";
+              btn.disabled = false;
+            }
+          }
+        } catch (e) {
+          alert("Install error: " + e.message);
+          if (btn) {
+            btn.innerText = "Install";
+            btn.disabled = false;
+          }
+        }
+      }
+
+      async function uninstallExtension(pkgName) {
+        const btn = document.getElementById(
+          `ext-btn-${pkgName.replace(/\./g, "-")}`,
+        );
+        if (btn) {
+          btn.innerText = "Uninstalling...";
+          btn.disabled = true;
+        }
+        try {
+          const mutation = `mutation { uninstallExtension(pkgName: "${pkgName}") }`;
+          const result = await graphQLRequest(mutation);
+          if (result.data && result.data.uninstallExtension) {
+            if (window.installedPkgNames)
+              window.installedPkgNames.delete(pkgName);
+            renderExtensions(allExtensions);
+          } else {
+            alert(
+              "Uninstall failed: " +
+                (result.errors ? result.errors[0].message : "Unknown error"),
+            );
+            if (btn) {
+              btn.innerText = "Uninstall";
+              btn.disabled = false;
+            }
+          }
+        } catch (e) {
+          alert("Uninstall error: " + e.message);
+          if (btn) {
+            btn.innerText = "Uninstall";
+            btn.disabled = false;
+          }
+        }
+      }
+
+      async function addToLibrary(event, sourceId, mangaUrl, btnId) {
+        event.stopPropagation();
+        const btn = document.getElementById(btnId);
+        if (btn) {
+          btn.innerText = "Adding...";
+          btn.disabled = true;
+        }
+
+        try {
+          const fetchMut = `
+                    mutation fetchMangaAndChapters($sourceId: String!, $mangaUrl: String!) {
+                        fetchMangaAndChapters(sourceId: $sourceId, mangaUrl: $mangaUrl) {
+                            id
+                        }
+                    }
+                `;
+          const fetchRes = await graphQLRequest(fetchMut, {
+            sourceId: sourceId.toString(),
+            mangaUrl,
+          });
+
+          if (fetchRes.data && fetchRes.data.fetchMangaAndChapters) {
+            const mangaId = fetchRes.data.fetchMangaAndChapters.id;
+
+            const updateMut = `
+                        mutation updateMangaInLibrary($id: Int!, $inLibrary: Boolean!) {
+                            updateMangaInLibrary(id: $id, inLibrary: $inLibrary) {
+                                id
+                                inLibrary
+                            }
+                        }
+                    `;
+            const updateRes = await graphQLRequest(updateMut, {
+              id: mangaId,
+              inLibrary: true,
             });
 
-            if (!response.ok) {
-                endpoint = '/graphql';
-                response = await fetch(endpoint, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({ query })
-                });
+            if (updateRes.data && updateRes.data.updateMangaInLibrary) {
+              if (btn) {
+                btn.innerText = "In Library";
+                btn.classList.add("btn-outline");
+              }
+            } else {
+              throw new Error(
+                updateRes.errors
+                  ? updateRes.errors[0].message
+                  : "Unknown error",
+              );
             }
-            return await response.json();
+          } else {
+            throw new Error(
+              fetchRes.errors ? fetchRes.errors[0].message : "Unknown error",
+            );
+          }
+        } catch (e) {
+          console.error(e);
+          alert("Add to library failed: " + e.message);
+          if (btn) {
+            btn.innerText = "Add to Library";
+            btn.disabled = false;
+          }
+        }
+      }
+
+      async function removeFromLibrary(event, mangaId, btnId) {
+        event.stopPropagation();
+        const btn = document.getElementById(btnId);
+        if (btn) {
+          btn.innerText = "Removing...";
+          btn.disabled = true;
         }
 
-        async function fetchLibraryData() {
-            try {
-                const result = await graphQLRequest(libraryQuery);
-                
-                if (result.data) {
-                    renderServerInfo(result.data.aboutServer);
-                    renderMangas(result.data.mangas);
-                } else if (result.errors) {
-                    console.error('GraphQL errors:', result.errors);
-                    document.getElementById('server-info').innerText = 'Error loading data from server.';
-                }
-            } catch (error) {
-                console.error('Error fetching data:', error);
-                document.getElementById('server-info').innerText = 'Failed to connect to server.';
-            }
-        }
-
-        async function fetchExtensionsData() {
-            try {
-                document.getElementById('content-grid').innerHTML = '<p>Loading extensions...</p>';
-                const result = await graphQLRequest(extensionsQuery);
-                
-                if (result.data) {
-                    allExtensions = result.data.availableExtensions || [];
-                    const installedExtensions = result.data.installedExtensions || [];
-                    window.installedPkgNames = new Set(installedExtensions.map(e => e.pkgName));
-                    renderExtensions(allExtensions);
-                } else if (result.errors) {
-                    console.error('GraphQL errors:', result.errors);
-                    document.getElementById('server-info').innerText = 'Error loading extensions.';
-                }
-            } catch (error) {
-                console.error('Error fetching extensions:', error);
-                document.getElementById('server-info').innerText = 'Failed to load extensions.';
-            }
-        }
-
-        async function installExtension(pkgName) {
-            const btn = document.getElementById(`ext-btn-${pkgName.replace(/\./g, '-')}`);
-            if (btn) {
-                btn.innerText = 'Installing...';
-                btn.disabled = true;
-            }
-            try {
-                const mutation = `mutation { installExtension(pkgName: "${pkgName}") { pkgName name } }`;
-                const result = await graphQLRequest(mutation);
-                if (result.data && result.data.installExtension) {
-                    if (!window.installedPkgNames) window.installedPkgNames = new Set();
-                    window.installedPkgNames.add(pkgName);
-                    renderExtensions(allExtensions); // Re-render to update button state
-                } else {
-                    console.error('Install failed:', result.errors);
-                    alert('Install failed: ' + (result.errors ? result.errors[0].message : 'Unknown error'));
-                    if (btn) {
-                        btn.innerText = 'Install';
-                        btn.disabled = false;
+        try {
+          const updateMut = `
+                    mutation updateMangaInLibrary($id: Int!, $inLibrary: Boolean!) {
+                        updateMangaInLibrary(id: $id, inLibrary: $inLibrary) {
+                            id
+                            inLibrary
+                        }
                     }
-                }
-            } catch (e) {
-                console.error(e);
-                alert('Install error: ' + e.message);
-                if (btn) {
-                    btn.innerText = 'Install';
-                    btn.disabled = false;
-                }
-            }
-        }
+                `;
+          const updateRes = await graphQLRequest(updateMut, {
+            id: parseInt(mangaId),
+            inLibrary: false,
+          });
 
-        async function uninstallExtension(pkgName) {
-            const btn = document.getElementById(`ext-btn-${pkgName.replace(/\./g, '-')}`);
+          if (updateRes.data && updateRes.data.updateMangaInLibrary) {
             if (btn) {
-                btn.innerText = 'Uninstalling...';
-                btn.disabled = true;
+              btn.innerText = "Add to Library";
+              btn.classList.remove("btn-outline");
+              btn.disabled = false;
+              btn.onclick = (e) =>
+                addToLibrary(
+                  e,
+                  document.getElementById("details-view").dataset.sourceId,
+                  document.getElementById("details-view").dataset.url,
+                  btnId,
+                );
             }
-            try {
-                const mutation = `mutation { uninstallExtension(pkgName: "${pkgName}") }`;
-                const result = await graphQLRequest(mutation);
-                if (result.data && result.data.uninstallExtension) {
-                    if (window.installedPkgNames) window.installedPkgNames.delete(pkgName);
-                    renderExtensions(allExtensions); // Re-render to update button state
-                } else {
-                    console.error('Uninstall failed:', result.errors);
-                    alert('Uninstall failed: ' + (result.errors ? result.errors[0].message : 'Unknown error'));
-                    if (btn) {
-                        btn.innerText = 'Uninstall';
-                        btn.disabled = false;
-                    }
-                }
-            } catch (e) {
-                console.error(e);
-                alert('Uninstall error: ' + e.message);
-                if (btn) {
-                    btn.innerText = 'Uninstall';
-                    btn.disabled = false;
-                }
-            }
+          } else {
+            throw new Error(
+              updateRes.errors ? updateRes.errors[0].message : "Unknown error",
+            );
+          }
+        } catch (e) {
+          console.error(e);
+          alert("Remove from library failed: " + e.message);
+          if (btn) {
+            btn.innerText = "In Library";
+            btn.disabled = false;
+          }
+        }
+      }
+
+      function renderServerInfo(aboutServer) {
+        if (!aboutServer) return;
+        const el = document.getElementById("server-info");
+        const name = aboutServer.name || "Suwayomi Server";
+        const version = aboutServer.version || "Unknown";
+        el.innerText = `${name} v${version} (Ready)`;
+      }
+
+      function renderMangas(mangas, isCatalog) {
+        const grid = document.getElementById("content-grid");
+        if (!mangas || mangas.length === 0) {
+          grid.innerHTML = "<p>No manga found.</p>";
+          return;
         }
 
-        function renderServerInfo(aboutServer) {
-            if (!aboutServer) return;
-            const el = document.getElementById('server-info');
-            const name = aboutServer.name || 'Suwayomi Server';
-            const version = aboutServer.version || 'Unknown';
-            el.innerText = `${name} v${version} (Ready)`;
-        }
+        grid.innerHTML = mangas
+          .map((manga) => {
+            const title = escapeHtml(manga.title);
+            const author = escapeHtml(manga.author || "Unknown");
+            const thumbnailUrl = escapeHtml(
+              manga.thumbnailUrl || `/api/v1/manga/${manga.id}/thumbnail`,
+            );
+            const id = escapeHtml(manga.id);
 
-        function renderMangas(mangas) {
-            const grid = document.getElementById('content-grid');
-            if (!mangas || mangas.length === 0) {
-                grid.innerHTML = '<p>No manga found in library.</p>';
-                return;
-            }
-
-            grid.innerHTML = mangas.map(manga => {
-                const title = escapeHtml(manga.title);
-                const author = escapeHtml(manga.author || 'Unknown');
-                const thumbnailUrl = escapeHtml(manga.thumbnailUrl || `/api/v1/manga/${manga.id}/thumbnail`);
-                const id = escapeHtml(manga.id);
-                
-                return `
+            return `
                 <div class="manga-card" onclick="navigate(event, '/manga/${id}')">
                     <img class="manga-cover" src="${thumbnailUrl}" alt="${title}" onerror="this.src='data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiPjxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbGw9IiMyYTJhMmEiLz48L3N2Zz4='">
                     <div class="manga-info">
@@ -339,41 +705,88 @@
                         <p class="manga-author">${author}</p>
                     </div>
                 </div>
-            `}).join('');
+            `;
+          })
+          .join("");
+      }
+
+      function renderCatalogMangas(mangas, sourceId) {
+        const grid = document.getElementById("content-grid");
+        if (!mangas || mangas.length === 0) {
+          grid.innerHTML = "<p>No manga found.</p>";
+          return;
         }
 
-        function renderExtensions(extensions) {
-            const grid = document.getElementById('content-grid');
-            if (!extensions || extensions.length === 0) {
-                grid.innerHTML = '<p>No extensions found.</p>';
-                return;
+        grid.innerHTML = mangas
+          .map((manga, idx) => {
+            const title = escapeHtml(manga.title);
+            const author = escapeHtml(manga.author || "Unknown");
+            const thumbnailUrl = escapeHtml(
+              manga.thumbnailUrl ||
+                (manga.id ? `/api/v1/manga/${manga.id}/thumbnail` : ""),
+            );
+            const btnId = `add-btn-${idx}`;
+
+            let btnHtml = "";
+            if (manga.inLibrary) {
+              btnHtml = `<button id="${btnId}" class="btn btn-outline" style="width: 100%; margin-top: 0.5rem;" onclick="event.stopPropagation()">In Library</button>`;
+            } else {
+              btnHtml = `<button id="${btnId}" class="btn" style="width: 100%; margin-top: 0.5rem;" onclick="addToLibrary(event, '${sourceId}', '${manga.url}', '${btnId}')">Add to Library</button>`;
             }
 
-            grid.innerHTML = extensions.map(ext => {
-                const title = escapeHtml(ext.name);
-                const pkg = escapeHtml(ext.pkgName);
-                const version = escapeHtml(ext.versionName);
-                const lang = escapeHtml(ext.lang || 'all');
-                const icon = escapeHtml(ext.iconUrl || '');
-                // Highlight AllManga logic if search matches
-                const highlightStyle = (ext.pkgName === 'eu.kanade.tachiyomi.extension.en.allanime' || title.toLowerCase().includes('allmanga') || title.toLowerCase().includes('allanime')) ? 'border: 2px solid var(--primary-color);' : '';
-                
-                const isInstalled = window.installedPkgNames && window.installedPkgNames.has(ext.pkgName);
-                const btnId = `ext-btn-${ext.pkgName.replace(/\./g, '-')}`;
-                
-                let buttonHtml;
-                if (isInstalled) {
-                    buttonHtml = `<button id="${btnId}" style="margin-top: 1rem; width: 100%; padding: 0.5rem; background: #d9534f; color: white; border: none; border-radius: 4px; font-weight: bold; cursor: pointer;" onclick="uninstallExtension('${ext.pkgName}')">Uninstall</button>`;
-                } else {
-                    buttonHtml = `<button id="${btnId}" style="margin-top: 1rem; width: 100%; padding: 0.5rem; background: var(--primary-color); color: var(--bg-color); border: none; border-radius: 4px; font-weight: bold; cursor: pointer;" onclick="installExtension('${ext.pkgName}')">Install</button>`;
-                }
+            return `
+                <div class="manga-card" onclick="openCatalogManga(event, '${sourceId}', '${manga.url}')">
+                    <img class="manga-cover" src="${thumbnailUrl}" alt="${title}" onerror="this.src='data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiPjxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbGw9IiMyYTJhMmEiLz48L3N2Zz4='">
+                    <div class="manga-info">
+                        <h3 class="manga-title" title="${title}">${title}</h3>
+                        <p class="manga-author">${author}</p>
+                        ${btnHtml}
+                    </div>
+                </div>
+            `;
+          })
+          .join("");
+      }
 
-                return `
+      function renderExtensions(extensions) {
+        const grid = document.getElementById("content-grid");
+        if (!extensions || extensions.length === 0) {
+          grid.innerHTML = "<p>No extensions found.</p>";
+          return;
+        }
+
+        grid.innerHTML = extensions
+          .map((ext) => {
+            const title = escapeHtml(ext.name);
+            const pkg = escapeHtml(ext.pkgName);
+            const version = escapeHtml(ext.versionName);
+            const lang = escapeHtml(ext.lang || "all");
+            const icon = escapeHtml(ext.iconUrl || "");
+            const highlightStyle =
+              ext.pkgName === "eu.kanade.tachiyomi.extension.en.allanime" ||
+              title.toLowerCase().includes("allmanga") ||
+              title.toLowerCase().includes("allanime")
+                ? "border: 2px solid var(--primary-color);"
+                : "";
+
+            const isInstalled =
+              window.installedPkgNames &&
+              window.installedPkgNames.has(ext.pkgName);
+            const btnId = `ext-btn-${ext.pkgName.replace(/\./g, "-")}`;
+
+            let buttonHtml;
+            if (isInstalled) {
+              buttonHtml = `<button id="${btnId}" class="btn" style="background: #d9534f; margin-top: 1rem; width: 100%;" onclick="uninstallExtension('${ext.pkgName}')">Uninstall</button>`;
+            } else {
+              buttonHtml = `<button id="${btnId}" class="btn" style="margin-top: 1rem; width: 100%;" onclick="installExtension('${ext.pkgName}')">Install</button>`;
+            }
+
+            return `
                 <div class="manga-card" style="padding: 1rem; ${highlightStyle}">
                     <div style="display: flex; align-items: center; gap: 1rem;">
                         <img src="${icon}" alt="${title}" style="width: 48px; height: 48px; border-radius: 8px;" onerror="this.src='data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiPjxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbGw9IiMyYTJhMmEiLz48L3N2Zz4='">
                         <div>
-                            <h3 class="manga-title" style="margin:0; font-size: 1.1rem;" title="${title}">${title} ${isInstalled ? '<span style="color: var(--primary-color); font-size: 0.8rem;">(Installed)</span>' : ''}</h3>
+                            <h3 class="manga-title" style="margin:0; font-size: 1.1rem;" title="${title}">${title} ${isInstalled ? '<span style="color: var(--primary-color); font-size: 0.8rem;">(Installed)</span>' : ""}</h3>
                             <p class="manga-author" style="margin: 0.2rem 0; font-size: 0.8rem;">${pkg}</p>
                             <span style="background: var(--border-color); padding: 0.2rem 0.4rem; border-radius: 4px; font-size: 0.75rem;">${lang}</span>
                             <span style="background: var(--border-color); padding: 0.2rem 0.4rem; border-radius: 4px; font-size: 0.75rem;">v${version}</span>
@@ -381,91 +794,308 @@
                     </div>
                     ${buttonHtml}
                 </div>
-            `}).join('');
+            `;
+          })
+          .join("");
+      }
+
+      function renderSources(sources) {
+        const grid = document.getElementById("content-grid");
+        if (!sources || sources.length === 0) {
+          grid.innerHTML =
+            "<p>No installed sources found. Please install extensions from the Extensions tab.</p>";
+          return;
         }
 
-        // Search logic
-        document.getElementById('extension-search').addEventListener('input', (e) => {
-            const term = e.target.value.toLowerCase();
-            const filtered = allExtensions.filter(ext => 
-                ext.name.toLowerCase().includes(term) || ext.pkgName.toLowerCase().includes(term)
-            );
-            
-            // special sort to bring allmanga/allanime up if search matches
-            if (term.includes('allmanga') || term.includes('allanime')) {
-                filtered.sort((a, b) => {
-                    const aMatch = a.pkgName === 'eu.kanade.tachiyomi.extension.en.allanime';
-                    const bMatch = b.pkgName === 'eu.kanade.tachiyomi.extension.en.allanime';
-                    if (aMatch && !bMatch) return -1;
-                    if (!aMatch && bMatch) return 1;
-                    return 0;
-                });
+        grid.innerHTML = sources
+          .map((source) => {
+            const name = escapeHtml(source.name);
+            const lang = escapeHtml(source.lang);
+            const displayName = escapeHtml(source.displayName);
+
+            return `
+                <div class="manga-card" style="padding: 1.5rem; justify-content: center; align-items: center;" onclick="navigate(event, '/source/${source.id}')">
+                    <h3 class="manga-title" style="text-align: center; font-size: 1.2rem;">${name}</h3>
+                    <span style="background: var(--border-color); padding: 0.2rem 0.4rem; border-radius: 4px; font-size: 0.85rem;">${lang}</span>
+                </div>
+            `;
+          })
+          .join("");
+      }
+
+      function renderMangaDetails(manga, chapters) {
+        const view = document.getElementById("details-view");
+        const title = escapeHtml(manga.title);
+        const author = escapeHtml(manga.author || "Unknown");
+        const desc = escapeHtml(manga.description || "No description");
+        const thumbnailUrl = escapeHtml(
+          manga.thumbnailUrl || `/api/v1/manga/${manga.id}/thumbnail`,
+        );
+
+        view.dataset.sourceId = manga.sourceId;
+        view.dataset.url = manga.url;
+
+        let libBtn = "";
+        if (manga.inLibrary) {
+          libBtn = `<button id="detail-lib-btn" class="btn btn-outline" onclick="removeFromLibrary(event, ${manga.id}, 'detail-lib-btn')">In Library</button>`;
+        } else {
+          libBtn = `<button id="detail-lib-btn" class="btn" onclick="addToLibrary(event, '${manga.sourceId}', '${manga.url}', 'detail-lib-btn')">Add to Library</button>`;
+        }
+
+        let chaptersHtml = "";
+        if (chapters && chapters.length > 0) {
+          chaptersHtml = chapters
+            .map(
+              (c) => `
+                    <div class="chapter-item">
+                        <div>
+                            <div style="font-weight: bold;">${escapeHtml(c.name)}</div>
+                        </div>
+                        <button class="btn" onclick="openReader(${manga.id}, ${c.id})">Read</button>
+                    </div>
+                `,
+            )
+            .join("");
+        } else {
+          chaptersHtml = "<p>No chapters found.</p>";
+        }
+
+        view.innerHTML = `
+                <div style="display: flex; gap: 2rem; margin-bottom: 2rem; flex-wrap: wrap;">
+                    <img src="${thumbnailUrl}" style="width: 200px; border-radius: 8px; object-fit: cover;" onerror="this.src='data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiPjxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbGw9IiMyYTJhMmEiLz48L3N2Zz4='">
+                    <div style="flex-grow: 1;">
+                        <h1 style="margin-top: 0; margin-bottom: 0.5rem;">${title}</h1>
+                        <p style="color: var(--text-secondary); margin-bottom: 1rem;">${author} &bull; ${escapeHtml(manga.status)}</p>
+                        ${libBtn}
+                        <div style="margin-top: 1.5rem; line-height: 1.5;">${desc}</div>
+                    </div>
+                </div>
+                <div class="chapter-list">
+                    <h3>Chapters (${chapters ? chapters.length : 0})</h3>
+                    ${chaptersHtml}
+                </div>
+            `;
+      }
+
+      async function openCatalogManga(event, sourceId, mangaUrl) {
+        event.preventDefault();
+        document.getElementById("view-title").innerText = "Loading...";
+        document.getElementById("content-grid").style.display = "none";
+        document.getElementById("details-view").style.display = "block";
+        document.getElementById("details-view").innerHTML =
+          "<p>Fetching details...</p>";
+
+        try {
+          const fetchMut = `
+                    mutation fetchMangaAndChapters($sourceId: String!, $mangaUrl: String!) {
+                        fetchMangaAndChapters(sourceId: $sourceId, mangaUrl: $mangaUrl) {
+                            id
+                        }
+                    }
+                `;
+          const fetchRes = await graphQLRequest(fetchMut, {
+            sourceId,
+            mangaUrl,
+          });
+          if (fetchRes.data && fetchRes.data.fetchMangaAndChapters) {
+            const mangaId = fetchRes.data.fetchMangaAndChapters.id;
+            navigate(null, `/manga/${mangaId}`, true);
+          } else {
+            document.getElementById("details-view").innerHTML =
+              `<p>Error: ${escapeHtml(fetchRes.errors[0].message)}</p>`;
+          }
+        } catch (e) {
+          document.getElementById("details-view").innerHTML =
+            "<p>Failed to load manga details.</p>";
+        }
+      }
+
+      async function openReader(mangaId, chapterId) {
+        document.getElementById("main-header").style.display = "none";
+        document.getElementById("main-content").style.display = "none";
+        const reader = document.getElementById("reader-view");
+        reader.style.display = "flex";
+
+        reader.innerHTML = `
+                <div class="reader-topbar">
+                    <button class="btn btn-outline" onclick="closeReader()">Back</button>
+                    <div>Loading...</div>
+                    <div style="width: 50px;"></div>
+                </div>
+                <div id="reader-images" style="width: 100%; max-width: 800px; margin-top: 60px;"></div>
+            `;
+
+        try {
+          const q = `
+                    query chapterPages($id: Int!) {
+                        chapterPages(chapterId: $id) {
+                            index
+                            url
+                            imageUrl
+                        }
+                    }
+                `;
+          const result = await graphQLRequest(q, { id: parseInt(chapterId) });
+
+          if (result.data && result.data.chapterPages) {
+            const pages = result.data.chapterPages;
+            document.querySelector(
+              ".reader-topbar div:nth-child(2)",
+            ).innerText = `Chapter`;
+
+            const imagesContainer = document.getElementById("reader-images");
+            imagesContainer.innerHTML = pages
+              .map(
+                (p) => `
+                        <img class="reader-image" src="/api/v1/manga/${mangaId}/chapter/${chapterId}/page/${p.index}" loading="lazy">
+                    `,
+              )
+              .join("");
+          }
+        } catch (error) {
+          console.error("Error fetching pages:", error);
+          document.getElementById("reader-images").innerHTML =
+            '<p style="text-align:center; padding: 2rem;">Failed to load pages.</p>';
+        }
+      }
+
+      function closeReader() {
+        document.getElementById("main-header").style.display = "flex";
+        document.getElementById("main-content").style.display = "block";
+        document.getElementById("reader-view").style.display = "none";
+        document.getElementById("reader-view").innerHTML = "";
+      }
+
+      function switchSourceCatalogTab(event, type) {
+        if (event) event.preventDefault();
+        currentCatalogType = type;
+
+        document
+          .querySelectorAll("#browse-nav-container a")
+          .forEach((a) => a.classList.remove("active"));
+        document.getElementById(`nav-${type}`).classList.add("active");
+
+        if (type === "search") {
+          document.getElementById("search-container").style.display = "flex";
+          document.getElementById("search-btn").style.display = "block";
+          document.getElementById("search-input").placeholder =
+            "Search manga...";
+          document.getElementById("search-btn").onclick = () => {
+            const query = document.getElementById("search-input").value;
+            if (query) {
+              currentSearchQuery = query;
+              fetchSourceCatalog(currentSourceId, "SEARCH", query);
             }
-            renderExtensions(filtered);
-        });
-
-        // Simple SPA router fallback
-        function navigate(event, path) {
-            event.preventDefault();
-            window.history.pushState({}, '', path);
-            updateNav();
-            
-            // In a real SPA, we would render different views here
-            // For now, just log the navigation
-            console.log('Navigated to:', path);
+          };
+        } else {
+          document.getElementById("search-container").style.display = "none";
+          document.getElementById("search-btn").style.display = "none";
+          fetchSourceCatalog(currentSourceId, type.toUpperCase());
         }
+      }
 
-        function updateNav() {
-            const path = window.location.pathname;
-            document.querySelectorAll('nav a').forEach(a => {
-                if (a.getAttribute('href') === path || 
-                   (path === '/' && a.getAttribute('href') === '/library')) {
-                    a.classList.add('active');
-                } else {
-                    a.classList.remove('active');
-                }
+      document.getElementById("search-input").addEventListener("input", (e) => {
+        const path = window.location.pathname;
+        if (path === "/browse") {
+          const term = e.target.value.toLowerCase();
+          const filtered = allExtensions.filter(
+            (ext) =>
+              ext.name.toLowerCase().includes(term) ||
+              ext.pkgName.toLowerCase().includes(term),
+          );
+
+          if (term.includes("allmanga") || term.includes("allanime")) {
+            filtered.sort((a, b) => {
+              const aMatch =
+                a.pkgName === "eu.kanade.tachiyomi.extension.en.allanime";
+              const bMatch =
+                b.pkgName === "eu.kanade.tachiyomi.extension.en.allanime";
+              if (aMatch && !bMatch) return -1;
+              if (!aMatch && bMatch) return 1;
+              return 0;
             });
+          }
+          renderExtensions(filtered);
         }
+      });
 
-        // Handle browser back/forward buttons
-        window.addEventListener('popstate', updateNav);
-
-        // Initial load
-        document.addEventListener('DOMContentLoaded', () => {
-            updateNav();
-            
-            const path = window.location.pathname;
-            if (path === '/browse') {
-                document.getElementById('view-title').innerText = 'Browse Extensions';
-                document.getElementById('search-container').style.display = 'block';
-                fetchExtensionsData();
-            } else {
-                document.getElementById('view-title').innerText = 'Library';
-                document.getElementById('search-container').style.display = 'none';
-                fetchLibraryData();
-            }
+      document
+        .getElementById("search-input")
+        .addEventListener("keypress", (e) => {
+          const path = window.location.pathname;
+          if (
+            e.key === "Enter" &&
+            path.startsWith("/source/") &&
+            currentCatalogType === "search"
+          ) {
+            document.getElementById("search-btn").click();
+          }
         });
 
-        // Extend updateNav/navigate to trigger correct fetch
-        const originalNavigate = navigate;
-        navigate = function(event, path) {
-            originalNavigate(event, path);
-            
-            if (path === '/browse') {
-                document.getElementById('view-title').innerText = 'Browse Extensions';
-                document.getElementById('search-container').style.display = 'block';
-                document.getElementById('extension-search').value = '';
-                fetchExtensionsData();
-            } else if (path === '/library' || path === '/') {
-                document.getElementById('view-title').innerText = 'Library';
-                document.getElementById('search-container').style.display = 'none';
-                fetchLibraryData();
-            } else {
-                document.getElementById('view-title').innerText = path.substring(1);
-                document.getElementById('search-container').style.display = 'none';
-                document.getElementById('content-grid').innerHTML = '<p>Work in progress.</p>';
-            }
+      function navigate(event, path, skipPush = false) {
+        if (event) event.preventDefault();
+        if (!skipPush) window.history.pushState({}, "", path);
+        updateNav();
+
+        document.getElementById("search-container").style.display = "none";
+        document.getElementById("search-btn").style.display = "none";
+        document.getElementById("browse-nav-container").style.display = "none";
+        document.getElementById("content-grid").style.display = "grid";
+        document.getElementById("details-view").style.display = "none";
+
+        if (path === "/browse") {
+          document.getElementById("view-title").innerText = "Extensions";
+          document.getElementById("search-container").style.display = "flex";
+          document.getElementById("search-input").placeholder =
+            "Search extensions...";
+          document.getElementById("search-input").value = "";
+          fetchExtensionsData();
+        } else if (path === "/sources") {
+          document.getElementById("view-title").innerText = "Sources";
+          fetchSourcesData();
+        } else if (path.startsWith("/source/")) {
+          currentSourceId = path.split("/")[2];
+          document.getElementById("view-title").innerText = "Source Catalog";
+          document.getElementById("browse-nav-container").style.display =
+            "flex";
+          switchSourceCatalogTab(null, "popular");
+        } else if (path.startsWith("/manga/")) {
+          const mangaId = path.split("/")[2];
+          document.getElementById("view-title").innerText = "Manga Details";
+          document.getElementById("content-grid").style.display = "none";
+          document.getElementById("details-view").style.display = "block";
+          document.getElementById("details-view").innerHTML =
+            "<p>Loading...</p>";
+          fetchMangaDetails(mangaId);
+        } else if (path === "/library" || path === "/") {
+          document.getElementById("view-title").innerText = "Library";
+          fetchLibraryData();
+        } else {
+          document.getElementById("view-title").innerText = path.substring(1);
+          document.getElementById("content-grid").innerHTML =
+            "<p>Work in progress.</p>";
         }
+      }
+
+      function updateNav() {
+        const path = window.location.pathname;
+        document.querySelectorAll("nav a").forEach((a) => {
+          if (
+            a.getAttribute("href") === path ||
+            (path === "/" && a.getAttribute("href") === "/library")
+          ) {
+            a.classList.add("active");
+          } else {
+            a.classList.remove("active");
+          }
+        });
+      }
+
+      window.addEventListener("popstate", updateNav);
+
+      document.addEventListener("DOMContentLoaded", () => {
+        navigate(null, window.location.pathname, true);
+      });
     </script>
-</body>
+  </body>
 </html>
