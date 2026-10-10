@@ -1,9 +1,9 @@
-use reqwest::{Client, header};
-use serde::{Deserialize, Serialize};
-use suwayomi_core::traits::MangaSource;
-use suwayomi_core::models::{Manga, MangaPage, MangaStatus, Chapter, Page, Filter, PageStatus};
-use suwayomi_core::error::Result;
 use async_trait::async_trait;
+use reqwest::{header, Client};
+use serde::{Deserialize, Serialize};
+use suwayomi_core::error::Result;
+use suwayomi_core::models::{Chapter, Filter, Manga, MangaPage, MangaStatus, Page, PageStatus};
+use suwayomi_core::traits::MangaSource;
 
 pub struct AllMangaSource {
     client: Client,
@@ -18,7 +18,10 @@ impl AllMangaSource {
     pub fn new() -> Self {
         let mut headers = header::HeaderMap::new();
         headers.insert("User-Agent", header::HeaderValue::from_static("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"));
-        headers.insert("Referer", header::HeaderValue::from_static("https://allmanga.to"));
+        headers.insert(
+            "Referer",
+            header::HeaderValue::from_static("https://allmanga.to"),
+        );
 
         let client = Client::builder()
             .default_headers(headers)
@@ -35,7 +38,10 @@ impl AllMangaSource {
     pub fn with_api_url(api_url: String) -> Self {
         let mut headers = header::HeaderMap::new();
         headers.insert("User-Agent", header::HeaderValue::from_static("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"));
-        headers.insert("Referer", header::HeaderValue::from_static("https://allmanga.to"));
+        headers.insert(
+            "Referer",
+            header::HeaderValue::from_static("https://allmanga.to"),
+        );
 
         let client = Client::builder()
             .default_headers(headers)
@@ -51,8 +57,14 @@ impl AllMangaSource {
 
     pub fn get_image_headers() -> header::HeaderMap {
         let mut headers = header::HeaderMap::new();
-        headers.insert("Referer", header::HeaderValue::from_static("https://allmanga.to"));
-        headers.insert("User-Agent", header::HeaderValue::from_static("Mozilla/5.0"));
+        headers.insert(
+            "Referer",
+            header::HeaderValue::from_static("https://allmanga.to"),
+        );
+        headers.insert(
+            "User-Agent",
+            header::HeaderValue::from_static("Mozilla/5.0"),
+        );
         headers
     }
 }
@@ -216,7 +228,7 @@ impl MangaSource for AllMangaSource {
                 }
             }
         }";
-        
+
         let variables = PopularVariables {
             type_field: "manga".to_string(),
             size: 24,
@@ -227,8 +239,17 @@ impl MangaSource for AllMangaSource {
         };
 
         let request_body = GraphQLQuery { query, variables };
-        let response = self.client.post(&self.api_url).json(&request_body).send().await.map_err(|e| suwayomi_core::error::SuwayomiError::Network(e.to_string()))?;
-        let graphql_response: GraphQLResponse<PopularData> = response.json().await.map_err(|e| suwayomi_core::error::SuwayomiError::Parse(e.to_string()))?;
+        let response = self
+            .client
+            .post(&self.api_url)
+            .json(&request_body)
+            .send()
+            .await
+            .map_err(|e| suwayomi_core::error::SuwayomiError::Network(e.to_string()))?;
+        let graphql_response: GraphQLResponse<PopularData> = response
+            .json()
+            .await
+            .map_err(|e| suwayomi_core::error::SuwayomiError::Parse(e.to_string()))?;
 
         let mut manga_list = Vec::new();
         if let Some(data) = graphql_response.data {
@@ -257,7 +278,10 @@ impl MangaSource for AllMangaSource {
         }
 
         let has_next_page = !manga_list.is_empty();
-        Ok(MangaPage { manga_list, has_next_page })
+        Ok(MangaPage {
+            manga_list,
+            has_next_page,
+        })
     }
 
     async fn get_latest_updates(&self, page: i32) -> Result<MangaPage> {
@@ -275,17 +299,31 @@ impl MangaSource for AllMangaSource {
                 }
             }
         }";
-        
+
         let variables = SearchVariables {
-            search: SearchInput { query: query.to_string() },
+            search: SearchInput {
+                query: query.to_string(),
+            },
             size: 24,
             page,
             translation_type: "sub".to_string(),
         };
 
-        let request_body = GraphQLQuery { query: graphql_query, variables };
-        let response = self.client.post(&self.api_url).json(&request_body).send().await.map_err(|e| suwayomi_core::error::SuwayomiError::Network(e.to_string()))?;
-        let graphql_response: GraphQLResponse<SearchData> = response.json().await.map_err(|e| suwayomi_core::error::SuwayomiError::Parse(e.to_string()))?;
+        let request_body = GraphQLQuery {
+            query: graphql_query,
+            variables,
+        };
+        let response = self
+            .client
+            .post(&self.api_url)
+            .json(&request_body)
+            .send()
+            .await
+            .map_err(|e| suwayomi_core::error::SuwayomiError::Network(e.to_string()))?;
+        let graphql_response: GraphQLResponse<SearchData> = response
+            .json()
+            .await
+            .map_err(|e| suwayomi_core::error::SuwayomiError::Parse(e.to_string()))?;
 
         let mut manga_list = Vec::new();
         if let Some(data) = graphql_response.data {
@@ -312,12 +350,15 @@ impl MangaSource for AllMangaSource {
         }
 
         let has_next_page = !manga_list.is_empty();
-        Ok(MangaPage { manga_list, has_next_page })
+        Ok(MangaPage {
+            manga_list,
+            has_next_page,
+        })
     }
 
     async fn get_manga_details(&self, mut manga: Manga) -> Result<Manga> {
         let id = manga.url.replace("/manga/", "");
-        
+
         let graphql_query = "query ($id: String!) {
             manga(_id: $id) {
                 _id
@@ -333,9 +374,21 @@ impl MangaSource for AllMangaSource {
         }";
 
         let variables = MangaDetailsVariables { id };
-        let request_body = GraphQLQuery { query: graphql_query, variables };
-        let response = self.client.post(&self.api_url).json(&request_body).send().await.map_err(|e| suwayomi_core::error::SuwayomiError::Network(e.to_string()))?;
-        let graphql_response: GraphQLResponse<MangaDetailsData> = response.json().await.map_err(|e| suwayomi_core::error::SuwayomiError::Parse(e.to_string()))?;
+        let request_body = GraphQLQuery {
+            query: graphql_query,
+            variables,
+        };
+        let response = self
+            .client
+            .post(&self.api_url)
+            .json(&request_body)
+            .send()
+            .await
+            .map_err(|e| suwayomi_core::error::SuwayomiError::Network(e.to_string()))?;
+        let graphql_response: GraphQLResponse<MangaDetailsData> = response
+            .json()
+            .await
+            .map_err(|e| suwayomi_core::error::SuwayomiError::Parse(e.to_string()))?;
 
         if let Some(data) = graphql_response.data {
             if let Some(details) = data.manga {
@@ -364,16 +417,34 @@ impl MangaSource for AllMangaSource {
             }
         }";
 
-        let variables = EpisodeInfosVariables { show_id: id.clone() };
-        let request_body = GraphQLQuery { query: graphql_query, variables };
-        let response = self.client.post(&self.api_url).json(&request_body).send().await.map_err(|e| suwayomi_core::error::SuwayomiError::Network(e.to_string()))?;
-        let graphql_response: GraphQLResponse<EpisodeInfosData> = response.json().await.map_err(|e| suwayomi_core::error::SuwayomiError::Parse(e.to_string()))?;
+        let variables = EpisodeInfosVariables {
+            show_id: id.clone(),
+        };
+        let request_body = GraphQLQuery {
+            query: graphql_query,
+            variables,
+        };
+        let response = self
+            .client
+            .post(&self.api_url)
+            .json(&request_body)
+            .send()
+            .await
+            .map_err(|e| suwayomi_core::error::SuwayomiError::Network(e.to_string()))?;
+        let graphql_response: GraphQLResponse<EpisodeInfosData> = response
+            .json()
+            .await
+            .map_err(|e| suwayomi_core::error::SuwayomiError::Parse(e.to_string()))?;
 
         let mut chapters = Vec::new();
         if let Some(data) = graphql_response.data {
             if let Some(mut eps) = data.episode_infos {
                 if !eps.is_empty() {
-                    eps.sort_by(|a, b| b.episode_id_num.partial_cmp(&a.episode_id_num).unwrap_or(std::cmp::Ordering::Equal));
+                    eps.sort_by(|a, b| {
+                        b.episode_id_num
+                            .partial_cmp(&a.episode_id_num)
+                            .unwrap_or(std::cmp::Ordering::Equal)
+                    });
                     for (index, ep) in eps.into_iter().enumerate() {
                         let name = ep.notes.unwrap_or(format!("Chapter {}", ep.episode_id_num));
                         chapters.push(Chapter {
@@ -402,19 +473,35 @@ impl MangaSource for AllMangaSource {
                 availableChaptersDetail
             }
         }";
-        
+
         let variables = MangaDetailsVariables { id: id.clone() };
-        let request_body = GraphQLQuery { query: graphql_query, variables };
-        let response = self.client.post(&self.api_url).json(&request_body).send().await.map_err(|e| suwayomi_core::error::SuwayomiError::Network(e.to_string()))?;
-        let graphql_response: GraphQLResponse<MangaChaptersOnlyData> = response.json().await.map_err(|e| suwayomi_core::error::SuwayomiError::Parse(e.to_string()))?;
-        
+        let request_body = GraphQLQuery {
+            query: graphql_query,
+            variables,
+        };
+        let response = self
+            .client
+            .post(&self.api_url)
+            .json(&request_body)
+            .send()
+            .await
+            .map_err(|e| suwayomi_core::error::SuwayomiError::Network(e.to_string()))?;
+        let graphql_response: GraphQLResponse<MangaChaptersOnlyData> = response
+            .json()
+            .await
+            .map_err(|e| suwayomi_core::error::SuwayomiError::Parse(e.to_string()))?;
+
         if let Some(data) = graphql_response.data {
             if let Some(details) = data.manga {
                 if let Some(avail) = details.available_chapters_detail {
                     if let Some(sub_chapters) = avail.sub {
-                        let mut sub_ch: Vec<f32> = sub_chapters.iter().filter_map(|s| s.parse::<f32>().ok()).collect();
-                        sub_ch.sort_by(|a, b| b.partial_cmp(a).unwrap_or(std::cmp::Ordering::Equal));
-                        
+                        let mut sub_ch: Vec<f32> = sub_chapters
+                            .iter()
+                            .filter_map(|s| s.parse::<f32>().ok())
+                            .collect();
+                        sub_ch
+                            .sort_by(|a, b| b.partial_cmp(a).unwrap_or(std::cmp::Ordering::Equal));
+
                         for (index, ch) in sub_ch.into_iter().enumerate() {
                             chapters.push(Chapter {
                                 id: 0,
@@ -455,10 +542,25 @@ impl MangaSource for AllMangaSource {
             episode_string: String,
         }
 
-        let variables = PageVariables { show_id: parts[0].replace("/manga/", ""), episode_string: parts[1].to_string() };
-        let request_body = GraphQLQuery { query: graphql_query, variables };
-        let response = self.client.post(&self.api_url).json(&request_body).send().await.map_err(|e| suwayomi_core::error::SuwayomiError::Network(e.to_string()))?;
-        let mut response_json: serde_json::Value = response.json().await.map_err(|e| suwayomi_core::error::SuwayomiError::Parse(e.to_string()))?;
+        let variables = PageVariables {
+            show_id: parts[0].replace("/manga/", ""),
+            episode_string: parts[1].to_string(),
+        };
+        let request_body = GraphQLQuery {
+            query: graphql_query,
+            variables,
+        };
+        let response = self
+            .client
+            .post(&self.api_url)
+            .json(&request_body)
+            .send()
+            .await
+            .map_err(|e| suwayomi_core::error::SuwayomiError::Network(e.to_string()))?;
+        let mut response_json: serde_json::Value = response
+            .json()
+            .await
+            .map_err(|e| suwayomi_core::error::SuwayomiError::Parse(e.to_string()))?;
 
         let mut pages = Vec::new();
         if let Some(data) = response_json.get_mut("data") {
@@ -486,7 +588,9 @@ impl MangaSource for AllMangaSource {
                 pages.push(Page {
                     index: i,
                     url: chapter.url.clone(),
-                    image_url: Some("https://via.placeholder.com/800x1200.png?text=Page+Not+Found".to_string()),
+                    image_url: Some(
+                        "https://via.placeholder.com/800x1200.png?text=Page+Not+Found".to_string(),
+                    ),
                     status: PageStatus::Ready,
                 });
             }
@@ -509,12 +613,11 @@ mod tests {
         let server = MockServer::start();
 
         let _mock = server.mock(|when, then| {
-            when.method(POST)
-                .path("/api")
-                .any_request();
+            when.method(POST).path("/api").any_request();
             then.status(200)
                 .header("content-type", "application/json")
-                .body(r#"{
+                .body(
+                    r#"{
                     "data": {
                         "queryPopular": {
                             "recommendations": [
@@ -529,13 +632,16 @@ mod tests {
                             ]
                         }
                     }
-                }"#);
+                }"#,
+                );
         });
 
         let source = AllMangaSource::with_api_url(server.url("/api"));
         let result = source.get_popular_manga(1).await;
-        
-        if let Err(e) = &result { println!("Error: {:?}", e); }
+
+        if let Err(e) = &result {
+            println!("Error: {:?}", e);
+        }
         assert!(result.is_ok());
         let page = result.unwrap();
         assert_eq!(page.manga_list.len(), 1);
@@ -549,12 +655,11 @@ mod tests {
         let server = MockServer::start();
 
         let _mock = server.mock(|when, then| {
-            when.method(POST)
-                .path("/api")
-                .any_request();
+            when.method(POST).path("/api").any_request();
             then.status(200)
                 .header("content-type", "application/json")
-                .body(r#"{
+                .body(
+                    r#"{
                     "data": {
                         "mangas": {
                             "edges": [
@@ -566,13 +671,16 @@ mod tests {
                             ]
                         }
                     }
-                }"#);
+                }"#,
+                );
         });
 
         let source = AllMangaSource::with_api_url(server.url("/api"));
         let result = source.search_manga("query", &[], 1).await;
-        
-        if let Err(e) = &result { println!("Error: {:?}", e); }
+
+        if let Err(e) = &result {
+            println!("Error: {:?}", e);
+        }
         assert!(result.is_ok());
         let page = result.unwrap();
         assert_eq!(page.manga_list.len(), 1);
@@ -585,12 +693,11 @@ mod tests {
         let server = MockServer::start();
 
         let _mock = server.mock(|when, then| {
-            when.method(POST)
-                .path("/api")
-                .any_request();
+            when.method(POST).path("/api").any_request();
             then.status(200)
                 .header("content-type", "application/json")
-                .body(r#"{
+                .body(
+                    r#"{
                     "data": {
                         "manga": {
                             "_id": "123",
@@ -603,7 +710,8 @@ mod tests {
                             "englishName": "Test English"
                         }
                     }
-                }"#);
+                }"#,
+                );
         });
 
         let source = AllMangaSource::with_api_url(server.url("/api"));
@@ -623,8 +731,10 @@ mod tests {
         };
 
         let result = source.get_manga_details(manga).await;
-        
-        if let Err(e) = &result { println!("Error: {:?}", e); }
+
+        if let Err(e) = &result {
+            println!("Error: {:?}", e);
+        }
         assert!(result.is_ok());
         let updated = result.unwrap();
         assert_eq!(updated.title, "Test English");
@@ -639,12 +749,11 @@ mod tests {
         let server = MockServer::start();
 
         let _mock = server.mock(|when, then| {
-            when.method(POST)
-                .path("/api")
-                .any_request();
+            when.method(POST).path("/api").any_request();
             then.status(200)
                 .header("content-type", "application/json")
-                .body(r#"{
+                .body(
+                    r#"{
                     "data": {
                         "episodeInfos": [
                             {
@@ -657,7 +766,8 @@ mod tests {
                             }
                         ]
                     }
-                }"#);
+                }"#,
+                );
         });
 
         let source = AllMangaSource::with_api_url(server.url("/api"));
@@ -677,8 +787,10 @@ mod tests {
         };
 
         let result = source.get_chapter_list(&manga).await;
-        
-        if let Err(e) = &result { println!("Error: {:?}", e); }
+
+        if let Err(e) = &result {
+            println!("Error: {:?}", e);
+        }
         assert!(result.is_ok());
         let chapters = result.unwrap();
         assert_eq!(chapters.len(), 2);
@@ -722,11 +834,26 @@ mod tests {
         });
 
         let source = AllMangaSource::with_api_url(server.url("/api"));
-        let manga = Manga { id: 1, source_id: AllMangaSource::SOURCE_ID, url: "/manga/123".to_string(), title: "Test".to_string(), artist: None, author: None, description: None, genre: None, status: MangaStatus::Ongoing, thumbnail_url: None, update_strategy: 0, initialized: true };
+        let manga = Manga {
+            id: 1,
+            source_id: AllMangaSource::SOURCE_ID,
+            url: "/manga/123".to_string(),
+            title: "Test".to_string(),
+            artist: None,
+            author: None,
+            description: None,
+            genre: None,
+            status: MangaStatus::Ongoing,
+            thumbnail_url: None,
+            update_strategy: 0,
+            initialized: true,
+        };
 
         let result = source.get_chapter_list(&manga).await;
-        
-        if let Err(e) = &result { println!("Error: {:?}", e); }
+
+        if let Err(e) = &result {
+            println!("Error: {:?}", e);
+        }
         assert!(result.is_ok());
         let chapters = result.unwrap();
         assert_eq!(chapters.len(), 2);
@@ -740,12 +867,11 @@ mod tests {
         let server = MockServer::start();
 
         let _mock = server.mock(|when, then| {
-            when.method(POST)
-                .path("/api")
-                .any_request();
+            when.method(POST).path("/api").any_request();
             then.status(200)
                 .header("content-type", "application/json")
-                .body(r#"{
+                .body(
+                    r#"{
                     "data": {
                         "episode": {
                             "sourceUrls": [
@@ -754,7 +880,8 @@ mod tests {
                             ]
                         }
                     }
-                }"#);
+                }"#,
+                );
         });
 
         let source = AllMangaSource::with_api_url(server.url("/api"));
@@ -774,10 +901,15 @@ mod tests {
         };
 
         let result = source.get_page_list(&chapter).await;
-        if let Err(e) = &result { println!("Error: {:?}", e); }
+        if let Err(e) = &result {
+            println!("Error: {:?}", e);
+        }
         assert!(result.is_ok());
         let pages = result.unwrap();
         assert_eq!(pages.len(), 2);
-        assert_eq!(pages[0].image_url.as_ref().unwrap(), "https://example.com/page1.jpg");
+        assert_eq!(
+            pages[0].image_url.as_ref().unwrap(),
+            "https://example.com/page1.jpg"
+        );
     }
 }

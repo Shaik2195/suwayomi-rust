@@ -1,7 +1,7 @@
 use std::collections::VecDeque;
 use std::sync::Arc;
+use suwayomi_core::models::{DownloadEvent, DownloadQueueItem, DownloadStatus};
 use tokio::sync::{broadcast, RwLock};
-use suwayomi_core::models::{DownloadQueueItem, DownloadStatus, DownloadEvent};
 
 #[derive(Clone)]
 pub struct DownloadQueue {
@@ -33,7 +33,7 @@ impl DownloadQueue {
         // avoid duplicates
         if !q.iter().any(|i| i.chapter_id == item.chapter_id) {
             // we maintain queue ordered naturally by priority since it's asked to act like one.
-            // But we actually provide `reorder` for exact priority changes. 
+            // But we actually provide `reorder` for exact priority changes.
             // In a real priority queue, we'd sort by some rank, here we enqueue at back
             // but can move things around.
             q.push_back(item.clone());
@@ -69,9 +69,9 @@ impl DownloadQueue {
 
     pub async fn reorder(&self, chapter_id: i64, new_index: usize) {
         let mut q = self.queue.write().await;
-        
+
         let current_idx_opt = q.iter().position(|i| i.chapter_id == chapter_id);
-        
+
         if let Some(current_idx) = current_idx_opt {
             let item = q.remove(current_idx).unwrap();
             let target_idx = new_index.min(q.len());
@@ -120,7 +120,7 @@ mod tests {
     #[tokio::test]
     async fn test_queue_operations() {
         let queue = DownloadQueue::new();
-        
+
         queue.enqueue(create_item(1)).await;
         queue.enqueue(create_item(2)).await;
 
@@ -133,7 +133,7 @@ mod tests {
 
         let all_after = queue.get_all().await;
         assert_eq!(all_after.len(), 1);
-        
+
         queue.clear().await;
         assert_eq!(queue.get_all().await.len(), 0);
     }

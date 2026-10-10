@@ -1,6 +1,4 @@
-use async_graphql::{
-    Context, EmptySubscription, Enum, Object, Schema, SimpleObject,
-};
+use async_graphql::{Context, EmptySubscription, Enum, Object, Schema, SimpleObject};
 use async_graphql_axum::{GraphQLRequest, GraphQLResponse};
 use axum::{
     extract::State,
@@ -217,7 +215,6 @@ impl Into<models::Category> for Category {
     }
 }
 
-
 #[derive(SimpleObject)]
 pub struct AboutServerPayload {
     pub name: String,
@@ -365,10 +362,13 @@ impl QueryRoot {
     }
 
     #[graphql(name = "downloadStatus")]
-    async fn download_status(&self, ctx: &Context<'_>) -> async_graphql::Result<DownloadStatusPayload> {
+    async fn download_status(
+        &self,
+        ctx: &Context<'_>,
+    ) -> async_graphql::Result<DownloadStatusPayload> {
         let queue = ctx.data::<suwayomi_downloader::queue::DownloadQueue>()?;
         let all_items = queue.get_all().await;
-        
+
         let mut queued = 0;
         let mut downloading = 0;
         let mut downloaded = 0;
@@ -405,14 +405,22 @@ impl QueryRoot {
         Ok(result.into_iter().map(|m| m.into()).collect())
     }
 
-    async fn mangas(&self, ctx: &Context<'_>, _category_id: Option<i64>) -> async_graphql::Result<Vec<Manga>> {
+    async fn mangas(
+        &self,
+        ctx: &Context<'_>,
+        _category_id: Option<i64>,
+    ) -> async_graphql::Result<Vec<Manga>> {
         let pool = ctx.data::<SqlitePool>()?;
         let repo = MangaRepository::new(pool);
         let result = repo.get_library().await?;
         Ok(result.into_iter().map(|m| m.into()).collect())
     }
 
-    async fn chapters(&self, ctx: &Context<'_>, manga_id: i64) -> async_graphql::Result<Vec<Chapter>> {
+    async fn chapters(
+        &self,
+        ctx: &Context<'_>,
+        manga_id: i64,
+    ) -> async_graphql::Result<Vec<Chapter>> {
         let pool = ctx.data::<SqlitePool>()?;
         let repo = ChapterRepository::new(pool);
         let result = repo.get_by_manga_id(manga_id).await?;
@@ -427,34 +435,52 @@ impl QueryRoot {
     }
 
     #[graphql(name = "availableExtensions")]
-    async fn available_extensions(&self, ctx: &Context<'_>) -> async_graphql::Result<Vec<ExtensionListing>> {
-        let registry = ctx.data::<std::sync::Arc<suwayomi_extensions::registry::ExtensionRegistry>>()?;
-        let result = registry.get_available_extensions().await
+    async fn available_extensions(
+        &self,
+        ctx: &Context<'_>,
+    ) -> async_graphql::Result<Vec<ExtensionListing>> {
+        let registry =
+            ctx.data::<std::sync::Arc<suwayomi_extensions::registry::ExtensionRegistry>>()?;
+        let result = registry
+            .get_available_extensions()
+            .await
             .map_err(|e| async_graphql::Error::new(e.to_string()))?;
         Ok(result.into_iter().map(|ext| ext.into()).collect())
     }
 
     #[graphql(name = "installedExtensions")]
-    async fn installed_extensions(&self, ctx: &Context<'_>) -> async_graphql::Result<Vec<ExtensionListing>> {
-        let registry = ctx.data::<std::sync::Arc<suwayomi_extensions::registry::ExtensionRegistry>>()?;
+    async fn installed_extensions(
+        &self,
+        ctx: &Context<'_>,
+    ) -> async_graphql::Result<Vec<ExtensionListing>> {
+        let registry =
+            ctx.data::<std::sync::Arc<suwayomi_extensions::registry::ExtensionRegistry>>()?;
         let installed = registry.get_installed_extensions().await;
         Ok(installed.into_iter().map(|ext| ext.into()).collect())
     }
 
     #[graphql(name = "extensionRepos")]
-    async fn extension_repos(&self, ctx: &Context<'_>) -> async_graphql::Result<Vec<ExtensionRepo>> {
-        let registry = ctx.data::<std::sync::Arc<suwayomi_extensions::registry::ExtensionRegistry>>()?;
+    async fn extension_repos(
+        &self,
+        ctx: &Context<'_>,
+    ) -> async_graphql::Result<Vec<ExtensionRepo>> {
+        let registry =
+            ctx.data::<std::sync::Arc<suwayomi_extensions::registry::ExtensionRegistry>>()?;
         Ok(registry.repos.iter().cloned().map(|r| r.into()).collect())
     }
 
     #[graphql(name = "sources")]
     async fn sources(&self, ctx: &Context<'_>) -> async_graphql::Result<Vec<Source>> {
-        let registry = ctx.data::<std::sync::Arc<suwayomi_extensions::registry::ExtensionRegistry>>()?;
+        let registry =
+            ctx.data::<std::sync::Arc<suwayomi_extensions::registry::ExtensionRegistry>>()?;
         let installed = registry.get_installed_extensions().await;
-        
+
         let mut sources = Vec::new();
         for ext in installed {
-            if ext.pkg_name == "eu.kanade.tachiyomi.extension.en.allanime" || ext.pkg_name == "eu.kanade.tachiyomi.extension.all.mangadex" || registry.get_source_by_pkg(&ext.pkg_name).is_some() {
+            if ext.pkg_name == "eu.kanade.tachiyomi.extension.en.allanime"
+                || ext.pkg_name == "eu.kanade.tachiyomi.extension.all.mangadex"
+                || registry.get_source_by_pkg(&ext.pkg_name).is_some()
+            {
                 let id = if ext.pkg_name == "eu.kanade.tachiyomi.extension.en.allanime" {
                     "8861274191478178487".to_string()
                 } else if ext.pkg_name == "eu.kanade.tachiyomi.extension.all.mangadex" {
@@ -472,7 +498,7 @@ impl QueryRoot {
                 });
             }
         }
-        
+
         Ok(sources)
     }
 
@@ -491,20 +517,30 @@ impl QueryRoot {
         page: i32,
         query: Option<String>,
     ) -> async_graphql::Result<MangaPagePayload> {
-        let registry = ctx.data::<std::sync::Arc<suwayomi_extensions::registry::ExtensionRegistry>>()?;
-        let sid = source_id.parse::<i64>().map_err(|_| async_graphql::Error::new("Invalid source ID"))?;
-        
-        let source = registry.get_source(sid)
+        let registry =
+            ctx.data::<std::sync::Arc<suwayomi_extensions::registry::ExtensionRegistry>>()?;
+        let sid = source_id
+            .parse::<i64>()
+            .map_err(|_| async_graphql::Error::new("Invalid source ID"))?;
+
+        let source = registry
+            .get_source(sid)
             .ok_or_else(|| async_graphql::Error::new(format!("Source {} not found", sid)))?;
 
         let page_res = if query.is_some() || type_name.to_uppercase() == "SEARCH" {
-            source.search_manga(query.as_deref().unwrap_or(""), &[], page).await
+            source
+                .search_manga(query.as_deref().unwrap_or(""), &[], page)
+                .await
                 .map_err(|e| async_graphql::Error::new(e.to_string()))?
         } else if type_name.to_uppercase() == "LATEST" {
-            source.get_latest_updates(page).await
+            source
+                .get_latest_updates(page)
+                .await
                 .map_err(|e| async_graphql::Error::new(e.to_string()))?
         } else {
-            source.get_popular_manga(page).await
+            source
+                .get_popular_manga(page)
+                .await
                 .map_err(|e| async_graphql::Error::new(e.to_string()))?
         };
 
@@ -515,28 +551,47 @@ impl QueryRoot {
     }
 
     #[graphql(name = "chapterPages")]
-    async fn chapter_pages(&self, ctx: &Context<'_>, chapter_id: i64) -> async_graphql::Result<Vec<Page>> {
+    async fn chapter_pages(
+        &self,
+        ctx: &Context<'_>,
+        chapter_id: i64,
+    ) -> async_graphql::Result<Vec<Page>> {
         let pool = ctx.data::<SqlitePool>()?;
-        let registry = ctx.data::<std::sync::Arc<suwayomi_extensions::registry::ExtensionRegistry>>()?;
-        
-        let chapter = ChapterRepository::new(pool).get_by_id(chapter_id).await?
-            .ok_or_else(|| async_graphql::Error::new(format!("Chapter {} not found", chapter_id)))?;
-            
-        let manga = MangaRepository::new(pool).get_by_id(chapter.manga_id).await?
-            .ok_or_else(|| async_graphql::Error::new(format!("Manga {} not found", chapter.manga_id)))?;
-            
-        let source = registry.get_source(manga.source_id)
-            .ok_or_else(|| async_graphql::Error::new(format!("Source {} not found", manga.source_id)))?;
+        let registry =
+            ctx.data::<std::sync::Arc<suwayomi_extensions::registry::ExtensionRegistry>>()?;
+
+        let chapter = ChapterRepository::new(pool)
+            .get_by_id(chapter_id)
+            .await?
+            .ok_or_else(|| {
+                async_graphql::Error::new(format!("Chapter {} not found", chapter_id))
+            })?;
+
+        let manga = MangaRepository::new(pool)
+            .get_by_id(chapter.manga_id)
+            .await?
+            .ok_or_else(|| {
+                async_graphql::Error::new(format!("Manga {} not found", chapter.manga_id))
+            })?;
+
+        let source = registry.get_source(manga.source_id).ok_or_else(|| {
+            async_graphql::Error::new(format!("Source {} not found", manga.source_id))
+        })?;
 
         let chapter_model: suwayomi_core::models::Chapter = chapter.into();
-        let pages = source.get_page_list(&chapter_model).await
+        let pages = source
+            .get_page_list(&chapter_model)
+            .await
             .map_err(|e| async_graphql::Error::new(e.to_string()))?;
 
-        Ok(pages.into_iter().map(|p| Page {
-            index: p.index,
-            url: p.url,
-            image_url: p.image_url,
-        }).collect())
+        Ok(pages
+            .into_iter()
+            .map(|p| Page {
+                index: p.index,
+                url: p.url,
+                image_url: p.image_url,
+            })
+            .collect())
     }
 }
 
@@ -545,17 +600,31 @@ pub struct MutationRoot;
 #[Object]
 impl MutationRoot {
     #[graphql(name = "installExtension")]
-    async fn install_extension(&self, ctx: &Context<'_>, pkg_name: String) -> async_graphql::Result<ExtensionListing> {
-        let registry = ctx.data::<std::sync::Arc<suwayomi_extensions::registry::ExtensionRegistry>>()?;
-        let listing = registry.install_extension(&pkg_name).await
+    async fn install_extension(
+        &self,
+        ctx: &Context<'_>,
+        pkg_name: String,
+    ) -> async_graphql::Result<ExtensionListing> {
+        let registry =
+            ctx.data::<std::sync::Arc<suwayomi_extensions::registry::ExtensionRegistry>>()?;
+        let listing = registry
+            .install_extension(&pkg_name)
+            .await
             .map_err(|e| async_graphql::Error::new(e.to_string()))?;
         Ok(listing.into())
     }
 
     #[graphql(name = "uninstallExtension")]
-    async fn uninstall_extension(&self, ctx: &Context<'_>, pkg_name: String) -> async_graphql::Result<bool> {
-        let registry = ctx.data::<std::sync::Arc<suwayomi_extensions::registry::ExtensionRegistry>>()?;
-        let result = registry.uninstall_extension(&pkg_name).await
+    async fn uninstall_extension(
+        &self,
+        ctx: &Context<'_>,
+        pkg_name: String,
+    ) -> async_graphql::Result<bool> {
+        let registry =
+            ctx.data::<std::sync::Arc<suwayomi_extensions::registry::ExtensionRegistry>>()?;
+        let result = registry
+            .uninstall_extension(&pkg_name)
+            .await
             .map_err(|e| async_graphql::Error::new(e.to_string()))?;
         Ok(result)
     }
@@ -570,7 +639,9 @@ impl MutationRoot {
         let pool = ctx.data::<SqlitePool>()?;
         let repo = MangaRepository::new(pool);
         repo.update_in_library(id, in_library).await?;
-        let manga = repo.get_by_id(id).await?
+        let manga = repo
+            .get_by_id(id)
+            .await?
             .ok_or_else(|| async_graphql::Error::new(format!("Manga {} not found", id)))?;
         Ok(manga.into())
     }
@@ -615,33 +686,38 @@ impl MutationRoot {
     }
 
     #[graphql(name = "downloadChapter")]
-    async fn download_chapter(&self, ctx: &Context<'_>, chapter_id: i64) -> async_graphql::Result<bool> {
+    async fn download_chapter(
+        &self,
+        ctx: &Context<'_>,
+        chapter_id: i64,
+    ) -> async_graphql::Result<bool> {
         let pool = ctx.data::<SqlitePool>()?;
         let chapter_repo = ChapterRepository::new(pool);
-        
-        let chapter = chapter_repo.get_by_id(chapter_id).await?
-            .ok_or_else(|| async_graphql::Error::new(format!("Chapter {} not found", chapter_id)))?;
-            
+
+        let chapter = chapter_repo.get_by_id(chapter_id).await?.ok_or_else(|| {
+            async_graphql::Error::new(format!("Chapter {} not found", chapter_id))
+        })?;
+
         let queue = ctx.data::<suwayomi_downloader::queue::DownloadQueue>()?;
-        
+
         let item = suwayomi_core::models::DownloadQueueItem {
             chapter_id: chapter.id,
             manga_id: chapter.manga_id,
             status: suwayomi_core::models::DownloadStatus::Queued,
         };
-        
+
         queue.enqueue(item).await;
-        
+
         Ok(true)
     }
-    
+
     #[graphql(name = "pauseDownloads")]
     async fn pause_downloads(&self, ctx: &Context<'_>) -> async_graphql::Result<bool> {
         let queue = ctx.data::<suwayomi_downloader::queue::DownloadQueue>()?;
         queue.pause().await;
         Ok(true)
     }
-    
+
     #[graphql(name = "resumeDownloads")]
     async fn resume_downloads(&self, ctx: &Context<'_>) -> async_graphql::Result<bool> {
         let queue = ctx.data::<suwayomi_downloader::queue::DownloadQueue>()?;
@@ -657,10 +733,14 @@ impl MutationRoot {
         manga_url: String,
     ) -> async_graphql::Result<Manga> {
         let pool = ctx.data::<SqlitePool>()?;
-        let registry = ctx.data::<std::sync::Arc<suwayomi_extensions::registry::ExtensionRegistry>>()?;
-        
-        let sid = source_id.parse::<i64>().map_err(|_| async_graphql::Error::new("Invalid source ID"))?;
-        let source = registry.get_source(sid)
+        let registry =
+            ctx.data::<std::sync::Arc<suwayomi_extensions::registry::ExtensionRegistry>>()?;
+
+        let sid = source_id
+            .parse::<i64>()
+            .map_err(|_| async_graphql::Error::new("Invalid source ID"))?;
+        let source = registry
+            .get_source(sid)
             .ok_or_else(|| async_graphql::Error::new(format!("Source {} not found", sid)))?;
 
         let manga_repo = MangaRepository::new(pool);
@@ -685,7 +765,9 @@ impl MutationRoot {
             }
         };
 
-        let mut updated_manga = source.get_manga_details(manga).await
+        let mut updated_manga = source
+            .get_manga_details(manga)
+            .await
             .map_err(|e| async_graphql::Error::new(e.to_string()))?;
 
         if updated_manga.id == 0 {
@@ -695,15 +777,19 @@ impl MutationRoot {
             manga_repo.update(&updated_manga).await?;
         }
 
-        let mut chapters = source.get_chapter_list(&updated_manga).await
+        let mut chapters = source
+            .get_chapter_list(&updated_manga)
+            .await
             .map_err(|e| async_graphql::Error::new(e.to_string()))?;
-            
+
         for chapter in &mut chapters {
             chapter.manga_id = updated_manga.id;
         }
-        
-        ChapterRepository::new(pool).insert_chapters(&chapters).await?;
-        
+
+        ChapterRepository::new(pool)
+            .insert_chapters(&chapters)
+            .await?;
+
         Ok(updated_manga.into())
     }
 }

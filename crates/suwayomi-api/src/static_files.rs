@@ -30,14 +30,10 @@ pub async fn static_handler(uri: Uri) -> impl IntoResponse {
         if fs_path.exists() {
             if let Ok(content) = tokio::fs::read(&fs_path).await {
                 let mime = mime_guess::from_path(&fs_path).first_or_octet_stream();
-                return (
-                    [(header::CONTENT_TYPE, mime.as_ref())],
-                    content,
-                )
-                    .into_response();
+                return ([(header::CONTENT_TYPE, mime.as_ref())], content).into_response();
             }
         }
-        
+
         // If it's a SPA fallback and file wasn't found on disk, try index.html on disk
         let mut index_path = PathBuf::from(&webui_dir);
         index_path.push("index.html");

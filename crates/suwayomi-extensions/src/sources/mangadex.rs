@@ -1,10 +1,9 @@
-use reqwest::{Client, header};
-use serde::Deserialize;
-use suwayomi_core::traits::MangaSource;
-use suwayomi_core::models::{Manga, MangaPage, MangaStatus, Chapter, Page, Filter, PageStatus};
-use suwayomi_core::error::Result;
 use async_trait::async_trait;
-
+use reqwest::{header, Client};
+use serde::Deserialize;
+use suwayomi_core::error::Result;
+use suwayomi_core::models::{Chapter, Filter, Manga, MangaPage, MangaStatus, Page, PageStatus};
+use suwayomi_core::traits::MangaSource;
 
 pub struct MangaDexSource {
     client: Client,
@@ -39,10 +38,7 @@ impl MangaDexSource {
             .build()
             .unwrap_or_default();
 
-        Self {
-            client,
-            api_url,
-        }
+        Self { client, api_url }
     }
 }
 
@@ -105,15 +101,15 @@ struct ChapterData {
 #[derive(Deserialize)]
 struct ChapterAttributes {
     #[allow(dead_code)]
-volume: Option<String>,
+    volume: Option<String>,
     chapter: Option<String>,
     title: Option<String>,
     #[serde(rename = "translatedLanguage")]
-#[allow(dead_code)]
-translated_language: Option<String>,
+    #[allow(dead_code)]
+    translated_language: Option<String>,
     #[serde(rename = "publishAt")]
-#[allow(dead_code)]
-publish_at: Option<String>,
+    #[allow(dead_code)]
+    publish_at: Option<String>,
 }
 
 #[derive(Deserialize)]
@@ -168,8 +164,16 @@ fn get_manga_status(status: &str) -> MangaStatus {
 
 impl MangaDexSource {
     async fn fetch_manga_list(&self, url: &str) -> Result<MangaPage> {
-        let response = self.client.get(url).send().await.map_err(|e| suwayomi_core::error::SuwayomiError::Network(e.to_string()))?;
-        let res_data: MangaListResponse = response.json().await.map_err(|e| suwayomi_core::error::SuwayomiError::Parse(e.to_string()))?;
+        let response = self
+            .client
+            .get(url)
+            .send()
+            .await
+            .map_err(|e| suwayomi_core::error::SuwayomiError::Network(e.to_string()))?;
+        let res_data: MangaListResponse = response
+            .json()
+            .await
+            .map_err(|e| suwayomi_core::error::SuwayomiError::Parse(e.to_string()))?;
 
         let mut manga_list = Vec::new();
         for item in res_data.data {
@@ -186,7 +190,7 @@ impl MangaDexSource {
             }
 
             let thumbnail_url = if let Some(cover_id) = cover_art_id {
-                // In a real implementation we would fetch the cover file name from the API, 
+                // In a real implementation we would fetch the cover file name from the API,
                 // but for simplicity we will just construct the URL with a placeholder.
                 // According to mangadex docs, cover is https://uploads.mangadex.org/covers/{manga.id}/{cover.file_name}
                 // However, without the filename, we can't fully construct it here without another API call.
@@ -214,7 +218,10 @@ impl MangaDexSource {
         }
 
         let has_next_page = res_data.offset + res_data.limit < res_data.total;
-        Ok(MangaPage { manga_list, has_next_page })
+        Ok(MangaPage {
+            manga_list,
+            has_next_page,
+        })
     }
 }
 
@@ -222,28 +229,50 @@ impl MangaDexSource {
 impl MangaSource for MangaDexSource {
     async fn get_popular_manga(&self, page: i32) -> Result<MangaPage> {
         let offset = (page - 1) * 20;
-        let url = format!("{}/manga?limit=20&offset={}&includes[]=cover_art", self.api_url, offset);
+        let url = format!(
+            "{}/manga?limit=20&offset={}&includes[]=cover_art",
+            self.api_url, offset
+        );
         self.fetch_manga_list(&url).await
     }
 
     async fn get_latest_updates(&self, page: i32) -> Result<MangaPage> {
         let offset = (page - 1) * 20;
-        let url = format!("{}/manga?limit=20&offset={}&includes[]=cover_art&order[updatedAt]=desc", self.api_url, offset);
+        let url = format!(
+            "{}/manga?limit=20&offset={}&includes[]=cover_art&order[updatedAt]=desc",
+            self.api_url, offset
+        );
         self.fetch_manga_list(&url).await
     }
 
     async fn search_manga(&self, query: &str, _filters: &[Filter], page: i32) -> Result<MangaPage> {
         let offset = (page - 1) * 20;
-        let url = format!("{}/manga?limit=20&offset={}&includes[]=cover_art&title={}", self.api_url, offset, urlencoding::encode(query));
+        let url = format!(
+            "{}/manga?limit=20&offset={}&includes[]=cover_art&title={}",
+            self.api_url,
+            offset,
+            urlencoding::encode(query)
+        );
         self.fetch_manga_list(&url).await
     }
 
     async fn get_manga_details(&self, mut manga: Manga) -> Result<Manga> {
         let id = manga.url.replace("/manga/", "");
-        let url = format!("{}/manga/{}?includes[]=author&includes[]=artist&includes[]=cover_art", self.api_url, id);
-        
-        let response = self.client.get(&url).send().await.map_err(|e| suwayomi_core::error::SuwayomiError::Network(e.to_string()))?;
-        let res_data: MangaResponse = response.json().await.map_err(|e| suwayomi_core::error::SuwayomiError::Parse(e.to_string()))?;
+        let url = format!(
+            "{}/manga/{}?includes[]=author&includes[]=artist&includes[]=cover_art",
+            self.api_url, id
+        );
+
+        let response = self
+            .client
+            .get(&url)
+            .send()
+            .await
+            .map_err(|e| suwayomi_core::error::SuwayomiError::Network(e.to_string()))?;
+        let res_data: MangaResponse = response
+            .json()
+            .await
+            .map_err(|e| suwayomi_core::error::SuwayomiError::Parse(e.to_string()))?;
 
         manga.title = get_title(&res_data.data.attributes.title);
         manga.description = get_description(&res_data.data.attributes.description);
@@ -271,7 +300,7 @@ impl MangaSource for MangaDexSource {
         struct RelAttributes {
             name: Option<String>,
             #[serde(rename = "fileName")]
-file_name: Option<String>,
+            file_name: Option<String>,
         }
 
         #[derive(Deserialize)]
@@ -292,25 +321,43 @@ file_name: Option<String>,
         }
 
         // Re-parse to get relationship attributes
-        let response2 = self.client.get(&url).send().await.map_err(|e| suwayomi_core::error::SuwayomiError::Network(e.to_string()))?;
+        let response2 = self
+            .client
+            .get(&url)
+            .send()
+            .await
+            .map_err(|e| suwayomi_core::error::SuwayomiError::Network(e.to_string()))?;
         if let Ok(res_rel) = response2.json::<MangaResponseWithRel>().await {
             for rel in res_rel.data.relationships {
                 if let Some(attr) = rel.attributes {
                     if rel.rel_type == "author" {
-                        if let Some(name) = attr.name { authors.push(name); }
+                        if let Some(name) = attr.name {
+                            authors.push(name);
+                        }
                     } else if rel.rel_type == "artist" {
-                        if let Some(name) = attr.name.clone() { artists.push(name); }
+                        if let Some(name) = attr.name.clone() {
+                            artists.push(name);
+                        }
                     } else if rel.rel_type == "cover_art" {
-                        if let Some(file_name) = attr.file_name { cover_art_file_name = Some(file_name); }
+                        if let Some(file_name) = attr.file_name {
+                            cover_art_file_name = Some(file_name);
+                        }
                     }
                 }
             }
         }
 
-        if !authors.is_empty() { manga.author = Some(authors.join(", ")); }
-        if !artists.is_empty() { manga.artist = Some(artists.join(", ")); }
+        if !authors.is_empty() {
+            manga.author = Some(authors.join(", "));
+        }
+        if !artists.is_empty() {
+            manga.artist = Some(artists.join(", "));
+        }
         if let Some(file_name) = cover_art_file_name {
-            manga.thumbnail_url = Some(format!("https://uploads.mangadex.org/covers/{}/{}", id, file_name));
+            manga.thumbnail_url = Some(format!(
+                "https://uploads.mangadex.org/covers/{}/{}",
+                id, file_name
+            ));
         }
 
         manga.initialized = true;
@@ -325,18 +372,39 @@ file_name: Option<String>,
         let mut source_order = 0;
 
         loop {
-            let url = format!("{}/manga/{}/feed?limit={}&offset={}&translatedLanguage[]=en&order[chapter]=desc", self.api_url, id, limit, offset);
-            
-            let response = self.client.get(&url).send().await.map_err(|e| suwayomi_core::error::SuwayomiError::Network(e.to_string()))?;
-            let res_data: ChapterListResponse = response.json().await.map_err(|e| suwayomi_core::error::SuwayomiError::Parse(e.to_string()))?;
-            
+            let url = format!(
+                "{}/manga/{}/feed?limit={}&offset={}&translatedLanguage[]=en&order[chapter]=desc",
+                self.api_url, id, limit, offset
+            );
+
+            let response = self
+                .client
+                .get(&url)
+                .send()
+                .await
+                .map_err(|e| suwayomi_core::error::SuwayomiError::Network(e.to_string()))?;
+            let res_data: ChapterListResponse = response
+                .json()
+                .await
+                .map_err(|e| suwayomi_core::error::SuwayomiError::Parse(e.to_string()))?;
+
             let count = res_data.data.len();
-            if count == 0 { break; }
+            if count == 0 {
+                break;
+            }
 
             for item in res_data.data {
-                let chapter_number = item.attributes.chapter.and_then(|c| c.parse::<f32>().ok()).unwrap_or(0.0);
+                let chapter_number = item
+                    .attributes
+                    .chapter
+                    .and_then(|c| c.parse::<f32>().ok())
+                    .unwrap_or(0.0);
                 let name = if let Some(t) = item.attributes.title {
-                    if t.is_empty() { format!("Chapter {}", chapter_number) } else { t }
+                    if t.is_empty() {
+                        format!("Chapter {}", chapter_number)
+                    } else {
+                        t
+                    }
                 } else {
                     format!("Chapter {}", chapter_number)
                 };
@@ -359,7 +427,9 @@ file_name: Option<String>,
             }
 
             offset += limit;
-            if count < limit as usize { break; }
+            if count < limit as usize {
+                break;
+            }
         }
 
         Ok(chapters)
@@ -369,12 +439,23 @@ file_name: Option<String>,
         let id = chapter.url.replace("/chapter/", "");
         let url = format!("{}/at-home/server/{}", self.api_url, id);
 
-        let response = self.client.get(&url).send().await.map_err(|e| suwayomi_core::error::SuwayomiError::Network(e.to_string()))?;
-        let res_data: AtHomeResponse = response.json().await.map_err(|e| suwayomi_core::error::SuwayomiError::Parse(e.to_string()))?;
+        let response = self
+            .client
+            .get(&url)
+            .send()
+            .await
+            .map_err(|e| suwayomi_core::error::SuwayomiError::Network(e.to_string()))?;
+        let res_data: AtHomeResponse = response
+            .json()
+            .await
+            .map_err(|e| suwayomi_core::error::SuwayomiError::Parse(e.to_string()))?;
 
         let mut pages = Vec::new();
         for (index, file) in res_data.chapter.data.iter().enumerate() {
-            let image_url = format!("https://uploads.mangadex.org/data/{}/{}", res_data.chapter.hash, file);
+            let image_url = format!(
+                "https://uploads.mangadex.org/data/{}/{}",
+                res_data.chapter.hash, file
+            );
             pages.push(Page {
                 index: index as i32,
                 url: chapter.url.clone(),
@@ -407,7 +488,8 @@ mod tests {
                 .query_param("offset", "0");
             then.status(200)
                 .header("content-type", "application/json")
-                .body(r#"{
+                .body(
+                    r#"{
                     "data": [
                         {
                             "id": "123",
@@ -423,13 +505,16 @@ mod tests {
                     "total": 1,
                     "offset": 0,
                     "limit": 20
-                }"#);
+                }"#,
+                );
         });
 
         let source = MangaDexSource::with_api_url(server.url(""));
         let result = source.get_popular_manga(1).await;
-        
-        if let Err(e) = &result { println!("Error: {:?}", e); }
+
+        if let Err(e) = &result {
+            println!("Error: {:?}", e);
+        }
         assert!(result.is_ok());
         let page = result.unwrap();
         assert_eq!(page.manga_list.len(), 1);
@@ -448,7 +533,8 @@ mod tests {
                 .query_param("title", "naruto");
             then.status(200)
                 .header("content-type", "application/json")
-                .body(r#"{
+                .body(
+                    r#"{
                     "data": [
                         {
                             "id": "456",
@@ -464,13 +550,16 @@ mod tests {
                     "total": 1,
                     "offset": 0,
                     "limit": 20
-                }"#);
+                }"#,
+                );
         });
 
         let source = MangaDexSource::with_api_url(server.url(""));
         let result = source.search_manga("naruto", &[], 1).await;
-        
-        if let Err(e) = &result { println!("Error: {:?}", e); }
+
+        if let Err(e) = &result {
+            println!("Error: {:?}", e);
+        }
         assert!(result.is_ok());
         let page = result.unwrap();
         assert_eq!(page.manga_list.len(), 1);
@@ -483,11 +572,11 @@ mod tests {
         let server = MockServer::start();
 
         let _mock = server.mock(|when, then| {
-            when.method(GET)
-                .path("/manga/123/feed");
+            when.method(GET).path("/manga/123/feed");
             then.status(200)
                 .header("content-type", "application/json")
-                .body(r#"{
+                .body(
+                    r#"{
                     "data": [
                         {
                             "id": "chap1",
@@ -502,7 +591,8 @@ mod tests {
                     "total": 1,
                     "offset": 0,
                     "limit": 500
-                }"#);
+                }"#,
+                );
         });
 
         let source = MangaDexSource::with_api_url(server.url(""));
@@ -522,8 +612,10 @@ mod tests {
         };
 
         let result = source.get_chapter_list(&manga).await;
-        
-        if let Err(e) = &result { println!("Error: {:?}", e); }
+
+        if let Err(e) = &result {
+            println!("Error: {:?}", e);
+        }
         assert!(result.is_ok());
         let chapters = result.unwrap();
         assert_eq!(chapters.len(), 1);
@@ -536,17 +628,18 @@ mod tests {
         let server = MockServer::start();
 
         let _mock = server.mock(|when, then| {
-            when.method(GET)
-                .path("/at-home/server/chap1");
+            when.method(GET).path("/at-home/server/chap1");
             then.status(200)
                 .header("content-type", "application/json")
-                .body(r#"{
+                .body(
+                    r#"{
                     "baseUrl": "https://s2.mangadex.network",
                     "chapter": {
                         "hash": "hash123",
                         "data": ["1.jpg", "2.jpg"]
                     }
-                }"#);
+                }"#,
+                );
         });
 
         let source = MangaDexSource::with_api_url(server.url(""));
@@ -566,10 +659,15 @@ mod tests {
         };
 
         let result = source.get_page_list(&chapter).await;
-        if let Err(e) = &result { println!("Error: {:?}", e); }
+        if let Err(e) = &result {
+            println!("Error: {:?}", e);
+        }
         assert!(result.is_ok());
         let pages = result.unwrap();
         assert_eq!(pages.len(), 2);
-        assert_eq!(pages[0].image_url.as_ref().unwrap(), "https://uploads.mangadex.org/data/hash123/1.jpg");
+        assert_eq!(
+            pages[0].image_url.as_ref().unwrap(),
+            "https://uploads.mangadex.org/data/hash123/1.jpg"
+        );
     }
 }

@@ -1,8 +1,8 @@
 pub mod graphql;
-pub mod rest;
 pub mod middleware;
-pub mod ws;
+pub mod rest;
 pub mod static_files;
+pub mod ws;
 
 use async_graphql::{EmptySubscription, Schema};
 use axum::{
@@ -27,7 +27,10 @@ pub fn create_router(state: AppState) -> Router {
         .route("/manga/:id", get(rest::get_manga))
         .route("/manga/:id/thumbnail", get(rest::get_manga_thumbnail))
         .route("/manga/:id/chapters", get(rest::get_manga_chapters))
-        .route("/manga/:manga_id/chapter/:chapter_id/page/:page", get(rest::get_chapter_page))
+        .route(
+            "/manga/:manga_id/chapter/:chapter_id/page/:page",
+            get(rest::get_chapter_page),
+        )
         .route("/chapter/:id", get(rest::get_chapter))
         .route("/category", get(rest::get_categories))
         .with_state(state.clone());
@@ -35,8 +38,14 @@ pub fn create_router(state: AppState) -> Router {
     let ws_state = state.download_queue.clone();
 
     Router::new()
-        .route("/graphql", post(graphql::graphql_handler).get(graphql::graphql_playground))
-        .route("/api/graphql", post(graphql::graphql_handler).get(graphql::graphql_playground))
+        .route(
+            "/graphql",
+            post(graphql::graphql_handler).get(graphql::graphql_playground),
+        )
+        .route(
+            "/api/graphql",
+            post(graphql::graphql_handler).get(graphql::graphql_playground),
+        )
         .route("/ws", get(ws::ws_handler).with_state(ws_state))
         .nest("/api/v1", api_routes)
         .fallback(static_files::static_handler)

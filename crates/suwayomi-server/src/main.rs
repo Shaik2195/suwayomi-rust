@@ -21,8 +21,8 @@ struct Args {
 }
 
 use std::path::PathBuf;
-use tokio::signal;
 use suwayomi_api::AppState;
+use tokio::signal;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -47,20 +47,23 @@ async fn main() -> anyhow::Result<()> {
     suwayomi_db::migrations::run_migrations(&pool).await?;
 
     // Configure Extension Registry
-    let repos = vec![
-        suwayomi_extensions::types::ExtensionRepo {
-            name: "Keiyoushi".to_string(),
-            url: "https://raw.githubusercontent.com/keiyoushi/extensions/repo/index.pb".to_string(),
-        }
-    ];
-    let extension_registry = std::sync::Arc::new(suwayomi_extensions::registry::ExtensionRegistry::new(repos));
+    let repos = vec![suwayomi_extensions::types::ExtensionRepo {
+        name: "Keiyoushi".to_string(),
+        url: "https://raw.githubusercontent.com/keiyoushi/extensions/repo/index.pb".to_string(),
+    }];
+    let extension_registry =
+        std::sync::Arc::new(suwayomi_extensions::registry::ExtensionRegistry::new(repos));
 
     // Build API router
     let download_queue = suwayomi_downloader::queue::DownloadQueue::new();
-    let schema = suwayomi_api::create_schema(pool.clone(), download_queue.clone(), extension_registry.clone());
-    let state = AppState { 
-        pool: pool.clone(), 
-        schema, 
+    let schema = suwayomi_api::create_schema(
+        pool.clone(),
+        download_queue.clone(),
+        extension_registry.clone(),
+    );
+    let state = AppState {
+        pool: pool.clone(),
+        schema,
         download_queue: download_queue.clone(),
         extension_registry,
     };
@@ -68,12 +71,13 @@ async fn main() -> anyhow::Result<()> {
 
     // Start background download workers
     let storage = suwayomi_downloader::storage::ChapterStorage::new(&data_dir.join("downloads"));
-    
+
     // We instantiate a generic JsExtensionRuntime and JsMangaSource just to satisfy the downloader worker pool compilation
     // In a real application, the source instance is retrieved dynamically per chapter/manga based on source_id
     let runtime = suwayomi_extensions::runtime::JsExtensionRuntime::new();
-    let dummy_source = std::sync::Arc::new(suwayomi_extensions::runtime::JsMangaSource::new(runtime));
-    
+    let dummy_source =
+        std::sync::Arc::new(suwayomi_extensions::runtime::JsMangaSource::new(runtime));
+
     let worker_pool = suwayomi_downloader::worker::DownloadWorkerPool::new(
         download_queue.clone(),
         storage,

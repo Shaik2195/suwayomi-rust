@@ -12,7 +12,9 @@ pub fn setup_cors() -> CorsLayer {
         .allow_origin(Any)
 }
 
-pub fn setup_tracing() -> TraceLayer<tower_http::classify::SharedClassifier<tower_http::classify::ServerErrorsAsFailures>> {
+pub fn setup_tracing(
+) -> TraceLayer<tower_http::classify::SharedClassifier<tower_http::classify::ServerErrorsAsFailures>>
+{
     TraceLayer::new_for_http()
 }
 

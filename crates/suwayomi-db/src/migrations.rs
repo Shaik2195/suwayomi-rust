@@ -104,7 +104,7 @@ pub async fn run_migrations(pool: &SqlitePool) -> Result<()> {
             key TEXT PRIMARY KEY,
             value TEXT NOT NULL
         );
-        "
+        ",
     )
     .await
     .map_err(|e| SuwayomiError::Database(e.to_string()))?;

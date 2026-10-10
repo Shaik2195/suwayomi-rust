@@ -1,6 +1,6 @@
 use std::path::{Path, PathBuf};
-use tokio::fs;
 use suwayomi_core::error::{Result, SuwayomiError};
+use tokio::fs;
 
 #[derive(Clone, Debug)]
 pub struct ChapterStorage {
@@ -37,7 +37,7 @@ impl ChapterStorage {
         bytes: &[u8],
     ) -> Result<PathBuf> {
         let chapter_dir = self.get_chapter_dir(manga_title, chapter_name).await;
-        
+
         fs::create_dir_all(&chapter_dir).await.map_err(|e| {
             SuwayomiError::Internal(format!("Failed to create chapter directory: {}", e))
         })?;
@@ -53,9 +53,9 @@ impl ChapterStorage {
         let file_name = format!("{:03}.{}", page_index, ext);
         let file_path = chapter_dir.join(file_name);
 
-        fs::write(&file_path, bytes).await.map_err(|e| {
-            SuwayomiError::Internal(format!("Failed to write page file: {}", e))
-        })?;
+        fs::write(&file_path, bytes)
+            .await
+            .map_err(|e| SuwayomiError::Internal(format!("Failed to write page file: {}", e)))?;
 
         Ok(file_path)
     }
@@ -83,8 +83,14 @@ mod tests {
 
     #[test]
     fn test_sanitize_filename() {
-        assert_eq!(ChapterStorage::sanitize_filename("My Manga/Test: <Title>"), "My Manga_Test_ _Title_");
-        assert_eq!(ChapterStorage::sanitize_filename("Normal Title"), "Normal Title");
+        assert_eq!(
+            ChapterStorage::sanitize_filename("My Manga/Test: <Title>"),
+            "My Manga_Test_ _Title_"
+        );
+        assert_eq!(
+            ChapterStorage::sanitize_filename("Normal Title"),
+            "Normal Title"
+        );
     }
 
     #[tokio::test]

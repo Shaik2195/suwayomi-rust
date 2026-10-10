@@ -40,11 +40,26 @@ mod tests {
 
     #[test]
     fn test_get_referer_header() {
-        assert_eq!(get_referer_header("https://allmanga.to/image.jpg"), Some("https://allmanga.to"));
-        assert_eq!(get_referer_header("https://cdn.allanime.day/image.jpg"), Some("https://allmanga.to"));
-        assert_eq!(get_referer_header("https://mkissa.com/image.jpg"), Some("https://allmanga.to"));
-        assert_eq!(get_referer_header("https://uploads.mangadex.org/data/123/456.jpg"), Some("https://mangadex.org"));
-        assert_eq!(get_referer_header("https://s2.mangadex.network/data/123/456.jpg"), Some("https://mangadex.org"));
+        assert_eq!(
+            get_referer_header("https://allmanga.to/image.jpg"),
+            Some("https://allmanga.to")
+        );
+        assert_eq!(
+            get_referer_header("https://cdn.allanime.day/image.jpg"),
+            Some("https://allmanga.to")
+        );
+        assert_eq!(
+            get_referer_header("https://mkissa.com/image.jpg"),
+            Some("https://allmanga.to")
+        );
+        assert_eq!(
+            get_referer_header("https://uploads.mangadex.org/data/123/456.jpg"),
+            Some("https://mangadex.org")
+        );
+        assert_eq!(
+            get_referer_header("https://s2.mangadex.network/data/123/456.jpg"),
+            Some("https://mangadex.org")
+        );
         assert_eq!(get_referer_header("https://example.com/image.jpg"), None);
     }
 }
@@ -55,8 +70,10 @@ pub async fn get_manga_thumbnail(
 ) -> Result<impl IntoResponse, StatusCode> {
     let pool = state.pool;
     let repo = MangaRepository::new(&pool);
-    
-    let manga = repo.get_by_id(id).await
+
+    let manga = repo
+        .get_by_id(id)
+        .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
         .ok_or(StatusCode::NOT_FOUND)?;
 
@@ -88,8 +105,11 @@ pub async fn get_manga_thumbnail(
         return Err(StatusCode::BAD_GATEWAY);
     }
 
-    let bytes = resp.bytes().await.map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
-    
+    let bytes = resp
+        .bytes()
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
     if let Ok(mut file) = tokio::fs::File::create(&cache_file).await {
         let _ = file.write_all(&bytes).await;
     }
@@ -109,15 +129,22 @@ pub async fn get_chapter_page(
     let chapter_repo = ChapterRepository::new(&pool);
     let manga_repo = MangaRepository::new(&pool);
 
-    let chapter = chapter_repo.get_by_id(chapter_id).await
+    let chapter = chapter_repo
+        .get_by_id(chapter_id)
+        .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
         .ok_or(StatusCode::NOT_FOUND)?;
 
-    let manga = manga_repo.get_by_id(manga_id).await
+    let manga = manga_repo
+        .get_by_id(manga_id)
+        .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
         .ok_or(StatusCode::NOT_FOUND)?;
 
-    let dl_path = PathBuf::from(format!("./data/downloads/{}/{}/{}.jpg", manga_id, chapter_id, page));
+    let dl_path = PathBuf::from(format!(
+        "./data/downloads/{}/{}/{}.jpg",
+        manga_id, chapter_id, page
+    ));
     if let Ok(bytes) = tokio::fs::read(&dl_path).await {
         return Ok((
             StatusCode::OK,
@@ -136,11 +163,18 @@ pub async fn get_chapter_page(
         ));
     }
 
-    let source = state.extension_registry.get_source(manga.source_id).ok_or(StatusCode::NOT_FOUND)?;
-    
-    let pages = source.get_page_list(&chapter).await.map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
-    
-    let target_page = pages.into_iter()
+    let source = state
+        .extension_registry
+        .get_source(manga.source_id)
+        .ok_or(StatusCode::NOT_FOUND)?;
+
+    let pages = source
+        .get_page_list(&chapter)
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    let target_page = pages
+        .into_iter()
         .find(|p| p.index == page)
         .ok_or(StatusCode::NOT_FOUND)?;
 
@@ -183,8 +217,11 @@ pub async fn get_chapter_page(
 
     let resp = success_resp.ok_or(StatusCode::BAD_GATEWAY)?;
 
-    let bytes = resp.bytes().await.map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
-    
+    let bytes = resp
+        .bytes()
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
     if let Ok(mut file) = tokio::fs::File::create(&cache_file).await {
         let _ = file.write_all(&bytes).await;
     }

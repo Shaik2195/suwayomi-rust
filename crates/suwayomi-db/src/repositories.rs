@@ -1,6 +1,6 @@
-use sqlx::{SqlitePool, Row};
-use suwayomi_core::models::{Manga, Chapter, Category, MangaStatus};
+use sqlx::{Row, SqlitePool};
 use suwayomi_core::error::{Result, SuwayomiError};
+use suwayomi_core::models::{Category, Chapter, Manga, MangaStatus};
 
 fn map_manga_status_from_str(status: &str) -> MangaStatus {
     match status {
@@ -38,11 +38,13 @@ impl<'a> MangaRepository<'a> {
 
     pub async fn insert(&self, manga: &Manga) -> Result<i64> {
         let genre_json = match &manga.genre {
-            Some(g) => Some(serde_json::to_string(g).map_err(|e| SuwayomiError::Parse(e.to_string()))?),
+            Some(g) => {
+                Some(serde_json::to_string(g).map_err(|e| SuwayomiError::Parse(e.to_string()))?)
+            }
             None => None,
         };
         let status_str = map_manga_status_to_str(&manga.status);
-        
+
         let result = sqlx::query(
             r#"
             INSERT INTO manga (source_id, url, title, artist, author, description, genre, status, thumbnail_url, update_strategy, initialized)
@@ -116,7 +118,9 @@ impl<'a> MangaRepository<'a> {
 
     pub async fn update(&self, manga: &Manga) -> Result<()> {
         let genre_json = match &manga.genre {
-            Some(g) => Some(serde_json::to_string(g).map_err(|e| SuwayomiError::Parse(e.to_string()))?),
+            Some(g) => {
+                Some(serde_json::to_string(g).map_err(|e| SuwayomiError::Parse(e.to_string()))?)
+            }
             None => None,
         };
         let status_str = map_manga_status_to_str(&manga.status);
@@ -189,8 +193,12 @@ impl<'a> ChapterRepository<'a> {
     }
 
     pub async fn insert_chapters(&self, chapters: &[Chapter]) -> Result<()> {
-        let mut tx = self.pool.begin().await.map_err(|e| SuwayomiError::Database(e.to_string()))?;
-        
+        let mut tx = self
+            .pool
+            .begin()
+            .await
+            .map_err(|e| SuwayomiError::Database(e.to_string()))?;
+
         for chapter in chapters {
             sqlx::query(
                 r#"
@@ -213,17 +221,20 @@ impl<'a> ChapterRepository<'a> {
             .await
             .map_err(|e| SuwayomiError::Database(e.to_string()))?;
         }
-        
-        tx.commit().await.map_err(|e| SuwayomiError::Database(e.to_string()))?;
+
+        tx.commit()
+            .await
+            .map_err(|e| SuwayomiError::Database(e.to_string()))?;
         Ok(())
     }
 
     pub async fn get_by_manga_id(&self, manga_id: i64) -> Result<Vec<Chapter>> {
-        let rows = sqlx::query("SELECT * FROM chapter WHERE manga_id = ? ORDER BY source_order ASC")
-            .bind(manga_id)
-            .fetch_all(self.pool)
-            .await
-            .map_err(|e| SuwayomiError::Database(e.to_string()))?;
+        let rows =
+            sqlx::query("SELECT * FROM chapter WHERE manga_id = ? ORDER BY source_order ASC")
+                .bind(manga_id)
+                .fetch_all(self.pool)
+                .await
+                .map_err(|e| SuwayomiError::Database(e.to_string()))?;
 
         Ok(rows.iter().map(|r| self.map_row_to_chapter(r)).collect())
     }
@@ -295,7 +306,7 @@ impl<'a> CategoryRepository<'a> {
             r#"
             INSERT INTO category (name, `order`, flags)
             VALUES (?, ?, ?)
-            "#
+            "#,
         )
         .bind(&category.name)
         .bind(category.order)

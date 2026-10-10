@@ -1,7 +1,10 @@
-use sqlx::{sqlite::{SqliteConnectOptions, SqlitePoolOptions}, SqlitePool};
+use sqlx::{
+    sqlite::{SqliteConnectOptions, SqlitePoolOptions},
+    SqlitePool,
+};
 use std::str::FromStr;
 use std::time::Duration;
-use suwayomi_core::error::{SuwayomiError, Result};
+use suwayomi_core::error::{Result, SuwayomiError};
 
 pub async fn create_sqlite_pool(database_url: &str) -> Result<SqlitePool> {
     let connection_options = SqliteConnectOptions::from_str(database_url)

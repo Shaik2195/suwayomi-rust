@@ -1,11 +1,11 @@
 use axum::{
-    extract::State,
     extract::ws::{Message, WebSocket, WebSocketUpgrade},
+    extract::State,
     response::IntoResponse,
 };
 use futures::{SinkExt, StreamExt};
-use tracing::debug;
 use suwayomi_downloader::queue::DownloadQueue;
+use tracing::debug;
 
 pub async fn ws_handler(
     ws: WebSocketUpgrade,
@@ -34,7 +34,7 @@ async fn handle_socket(socket: WebSocket, queue: DownloadQueue) {
         while let Some(Ok(msg)) = receiver.next().await {
             match msg {
                 Message::Ping(_) => {
-                    // We shouldn't need to manually send pong if axum handles it, 
+                    // We shouldn't need to manually send pong if axum handles it,
                     // but we can just ignore ping/pong manually here or process text
                 }
                 Message::Close(_) => {
