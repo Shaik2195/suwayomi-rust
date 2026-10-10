@@ -119,7 +119,8 @@ publish_at: Option<String>,
 #[derive(Deserialize)]
 struct AtHomeResponse {
     #[serde(rename = "baseUrl")]
-base_url: String,
+    #[allow(dead_code)]
+    base_url: String,
     chapter: AtHomeChapter,
 }
 
@@ -373,7 +374,7 @@ file_name: Option<String>,
 
         let mut pages = Vec::new();
         for (index, file) in res_data.chapter.data.iter().enumerate() {
-            let image_url = format!("{}/data/{}/{}", res_data.base_url, res_data.chapter.hash, file);
+            let image_url = format!("https://uploads.mangadex.org/data/{}/{}", res_data.chapter.hash, file);
             pages.push(Page {
                 index: index as i32,
                 url: chapter.url.clone(),
@@ -540,7 +541,7 @@ mod tests {
             then.status(200)
                 .header("content-type", "application/json")
                 .body(r#"{
-                    "baseUrl": "https://uploads.mangadex.org",
+                    "baseUrl": "https://s2.mangadex.network",
                     "chapter": {
                         "hash": "hash123",
                         "data": ["1.jpg", "2.jpg"]

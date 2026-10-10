@@ -11,6 +11,16 @@ use suwayomi_db::repositories::{CategoryRepository, ChapterRepository, MangaRepo
 
 use crate::AppState;
 
+fn get_referer_header(url: &str) -> Option<&'static str> {
+    if url.contains("allmanga") || url.contains("allanime") || url.contains("mkissa") {
+        Some("https://allmanga.to")
+    } else if url.contains("mangadex") {
+        Some("https://mangadex.org")
+    } else {
+        None
+    }
+}
+
 pub async fn get_manga(
     State(state): State<AppState>,
     Path(id): Path<i64>,
@@ -21,6 +31,21 @@ pub async fn get_manga(
         Ok(Some(manga)) => Ok(Json(manga)),
         Ok(None) => Err(StatusCode::NOT_FOUND),
         Err(_) => Err(StatusCode::INTERNAL_SERVER_ERROR),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_get_referer_header() {
+        assert_eq!(get_referer_header("https://allmanga.to/image.jpg"), Some("https://allmanga.to"));
+        assert_eq!(get_referer_header("https://cdn.allanime.day/image.jpg"), Some("https://allmanga.to"));
+        assert_eq!(get_referer_header("https://mkissa.com/image.jpg"), Some("https://allmanga.to"));
+        assert_eq!(get_referer_header("https://uploads.mangadex.org/data/123/456.jpg"), Some("https://mangadex.org"));
+        assert_eq!(get_referer_header("https://s2.mangadex.network/data/123/456.jpg"), Some("https://mangadex.org"));
+        assert_eq!(get_referer_header("https://example.com/image.jpg"), None);
     }
 }
 
@@ -50,12 +75,14 @@ pub async fn get_manga_thumbnail(
     }
 
     let client = reqwest::Client::new();
-    let resp = client.get(&thumbnail_url)
-        .header("Referer", "https://allmanga.to")
-        .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
-        .send()
-        .await
-        .map_err(|_| StatusCode::BAD_GATEWAY)?;
+    let mut req = client.get(&thumbnail_url)
+        .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36");
+
+    if let Some(referer) = get_referer_header(&thumbnail_url) {
+        req = req.header("Referer", referer);
+    }
+
+    let resp = req.send().await.map_err(|_| StatusCode::BAD_GATEWAY)?;
 
     if !resp.status().is_success() {
         return Err(StatusCode::BAD_GATEWAY);
@@ -122,16 +149,39 @@ pub async fn get_chapter_page(
     let _ = tokio::fs::create_dir_all(&cache_dir).await;
 
     let client = reqwest::Client::new();
-    let resp = client.get(&image_url)
-        .header("Referer", "https://allmanga.to")
-        .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
-        .send()
-        .await
-        .map_err(|_| StatusCode::BAD_GATEWAY)?;
+    let mut req = client.get(&image_url)
+        .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36");
 
-    if !resp.status().is_success() {
-        return Err(StatusCode::BAD_GATEWAY);
+    if let Some(referer) = get_referer_header(&image_url) {
+        req = req.header("Referer", referer);
     }
+
+    let resp = req.send().await;
+
+    let mut success_resp = match resp {
+        Ok(r) if r.status().is_success() => Some(r),
+        _ => None,
+    };
+
+    if success_resp.is_none() && image_url.contains("mangadex.network") {
+        if let Some(idx) = image_url.find("/data") {
+            let fallback_url = format!("https://uploads.mangadex.org{}", &image_url[idx..]);
+            let mut fallback_req = client.get(&fallback_url)
+                .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36");
+
+            if let Some(referer) = get_referer_header(&fallback_url) {
+                fallback_req = fallback_req.header("Referer", referer);
+            }
+
+            if let Ok(r) = fallback_req.send().await {
+                if r.status().is_success() {
+                    success_resp = Some(r);
+                }
+            }
+        }
+    }
+
+    let resp = success_resp.ok_or(StatusCode::BAD_GATEWAY)?;
 
     let bytes = resp.bytes().await.map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
     

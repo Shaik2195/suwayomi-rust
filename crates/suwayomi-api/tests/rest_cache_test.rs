@@ -24,7 +24,9 @@ async fn test_get_manga_thumbnail_proxy() {
 
     let server = MockServer::start();
     let mock_thumbnail = server.mock(|when, then| {
-        when.method("GET").path("/thumb.jpg");
+        when.method("GET")
+            .path("/mangadex/thumb.jpg")
+            .header("Referer", "https://mangadex.org");
         then.status(200).header("content-type", "image/jpeg").body(vec![1, 2, 3, 4]);
     });
 
@@ -39,7 +41,7 @@ async fn test_get_manga_thumbnail_proxy() {
         description: None,
         genre: None,
         status: MangaStatus::Ongoing,
-        thumbnail_url: Some(server.url("/thumb.jpg")),
+        thumbnail_url: Some(format!("{}/mangadex/thumb.jpg", server.url(""))),
         update_strategy: 0,
         initialized: true,
     };
@@ -71,7 +73,7 @@ async fn test_get_manga_thumbnail_proxy() {
     let body_bytes = response.into_body().collect().await.unwrap().to_bytes();
     assert_eq!(body_bytes.to_vec(), vec![1, 2, 3, 4]);
 
-    mock_thumbnail.assert_hits(1);
+    mock_thumbnail.assert_calls(1);
     
     // Check if the file is cached
     let cache_file = PathBuf::from("./data/cache/thumbnails").join(manga_id.to_string());
@@ -91,7 +93,7 @@ async fn test_get_chapter_page_proxy() {
     run_migrations(&pool).await.unwrap();
 
     let server = MockServer::start();
-    let mock_page = server.mock(|when, then| {
+    let _mock_page = server.mock(|when, then| {
         when.method("GET").path("/page.jpg");
         then.status(200).header("content-type", "image/jpeg").body(vec![5, 6, 7, 8]);
     });
