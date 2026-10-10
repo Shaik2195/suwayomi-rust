@@ -424,7 +424,7 @@
 
           const q = `
                     query sourceManga($sourceId: String!, $type: String!, $page: Int!, $query: String) {
-                        sourceManga(sourceId: $sourceId, typeName: $type, page: 1, query: $query) {
+                        sourceManga(sourceId: $sourceId, typeName: $type, page: $page, query: $query) {
                             mangas {
                                 id
                                 title
@@ -441,7 +441,7 @@
           const variables = {
             sourceId: sourceId,
             type: type,
-            page: 1,
+            page: $page,
             query: query === "" ? null : query,
           };
 
@@ -559,7 +559,7 @@
         }
       }
 
-      async function addToLibrary(event, sourceId, mangaUrl, btnId) {
+      async function addToLibrary(event, sourceId, mangaUrl, btnId, mangaIdParam = 0) {
         event.stopPropagation();
         const btn = document.getElementById(btnId);
         if (btn) {
@@ -568,49 +568,54 @@
         }
 
         try {
-          const fetchMut = `
-                    mutation fetchMangaAndChapters($sourceId: String!, $mangaUrl: String!) {
-                        fetchMangaAndChapters(sourceId: $sourceId, mangaUrl: $mangaUrl) {
-                            id
-                        }
-                    }
-                `;
-          const fetchRes = await graphQLRequest(fetchMut, {
-            sourceId: sourceId.toString(),
-            mangaUrl,
-          });
-
-          if (fetchRes.data && fetchRes.data.fetchMangaAndChapters) {
-            const mangaId = fetchRes.data.fetchMangaAndChapters.id;
-
-            const updateMut = `
-                        mutation updateMangaInLibrary($id: Int!, $inLibrary: Boolean!) {
-                            updateMangaInLibrary(id: $id, inLibrary: $inLibrary) {
-                                id
-                                inLibrary
-                            }
-                        }
-                    `;
-            const updateRes = await graphQLRequest(updateMut, {
-              id: mangaId,
-              inLibrary: true,
+          let mangaId = mangaIdParam;
+          
+          if (!mangaId || mangaId === 0) {
+            const fetchMut = `
+                      mutation fetchMangaAndChapters($sourceId: String!, $mangaUrl: String!) {
+                          fetchMangaAndChapters(sourceId: $sourceId, mangaUrl: $mangaUrl) {
+                              id
+                          }
+                      }
+                  `;
+            const fetchRes = await graphQLRequest(fetchMut, {
+              sourceId: sourceId.toString(),
+              mangaUrl,
             });
 
-            if (updateRes.data && updateRes.data.updateMangaInLibrary) {
-              if (btn) {
-                btn.innerText = "In Library";
-                btn.classList.add("btn-outline");
-              }
+            if (fetchRes.data && fetchRes.data.fetchMangaAndChapters) {
+              mangaId = fetchRes.data.fetchMangaAndChapters.id;
             } else {
               throw new Error(
-                updateRes.errors
-                  ? updateRes.errors[0].message
-                  : "Unknown error",
+                fetchRes.errors ? fetchRes.errors[0].message : "Unknown error"
               );
+            }
+          }
+
+          const updateMut = `
+                      mutation updateMangaInLibrary($id: Int!, $inLibrary: Boolean!) {
+                          updateMangaInLibrary(id: $id, inLibrary: $inLibrary) {
+                              id
+                              inLibrary
+                          }
+                      }
+                  `;
+          const updateRes = await graphQLRequest(updateMut, {
+            id: mangaId,
+            inLibrary: true,
+          });
+
+          if (updateRes.data && updateRes.data.updateMangaInLibrary) {
+            if (btn) {
+              btn.innerText = "In Library";
+              btn.classList.add("btn-outline");
+              btn.onclick = (e) => e.stopPropagation();
             }
           } else {
             throw new Error(
-              fetchRes.errors ? fetchRes.errors[0].message : "Unknown error",
+              updateRes.errors
+                ? updateRes.errors[0].message
+                : "Unknown error",
             );
           }
         } catch (e) {
@@ -731,11 +736,11 @@
             if (manga.inLibrary) {
               btnHtml = `<button id="${btnId}" class="btn btn-outline" style="width: 100%; margin-top: 0.5rem;" onclick="event.stopPropagation()">In Library</button>`;
             } else {
-              btnHtml = `<button id="${btnId}" class="btn" style="width: 100%; margin-top: 0.5rem;" onclick="addToLibrary(event, '${sourceId}', '${manga.url}', '${btnId}')">Add to Library</button>`;
+              btnHtml = `<button id="${btnId}" class="btn" style="width: 100%; margin-top: 0.5rem;" onclick="addToLibrary(event, '${sourceId}', '${manga.url}', '${btnId}', ${manga.id || 0})">Add to Library</button>`;
             }
 
             return `
-                <div class="manga-card" onclick="openCatalogManga(event, '${sourceId}', '${manga.url}')">
+                <div class="manga-card" onclick="openCatalogManga(event, '${sourceId}', '${manga.url}', ${manga.id || 0})">
                     <img class="manga-cover" src="${thumbnailUrl}" alt="${title}" onerror="this.src='data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiPjxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbGw9IiMyYTJhMmEiLz48L3N2Zz4='">
                     <div class="manga-info">
                         <h3 class="manga-title" title="${title}">${title}</h3>
@@ -839,7 +844,7 @@
         if (manga.inLibrary) {
           libBtn = `<button id="detail-lib-btn" class="btn btn-outline" onclick="removeFromLibrary(event, ${manga.id}, 'detail-lib-btn')">In Library</button>`;
         } else {
-          libBtn = `<button id="detail-lib-btn" class="btn" onclick="addToLibrary(event, '${manga.sourceId}', '${manga.url}', 'detail-lib-btn')">Add to Library</button>`;
+          libBtn = `<button id="detail-lib-btn" class="btn" onclick="addToLibrary(event, '${manga.sourceId}', '${manga.url}', 'detail-lib-btn', ${manga.id || 0})">Add to Library</button>`;
         }
 
         let chaptersHtml = "";
@@ -877,8 +882,14 @@
             `;
       }
 
-      async function openCatalogManga(event, sourceId, mangaUrl) {
+      async function openCatalogManga(event, sourceId, mangaUrl, mangaId = 0) {
         event.preventDefault();
+
+        if (mangaId && mangaId !== 0) {
+          navigate(null, `/manga/${mangaId}`, true);
+          return;
+        }
+
         document.getElementById("view-title").innerText = "Loading...";
         document.getElementById("content-grid").style.display = "none";
         document.getElementById("details-view").style.display = "block";
@@ -898,8 +909,8 @@
             mangaUrl,
           });
           if (fetchRes.data && fetchRes.data.fetchMangaAndChapters) {
-            const mangaId = fetchRes.data.fetchMangaAndChapters.id;
-            navigate(null, `/manga/${mangaId}`, true);
+            const newMangaId = fetchRes.data.fetchMangaAndChapters.id;
+            navigate(null, `/manga/${newMangaId}`, true);
           } else {
             document.getElementById("details-view").innerHTML =
               `<p>Error: ${escapeHtml(fetchRes.errors[0].message)}</p>`;
