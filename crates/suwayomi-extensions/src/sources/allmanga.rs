@@ -34,7 +34,15 @@ impl AllMangaSource {
             api_url: "https://api.allanime.day/api".to_string(),
         }
     }
+}
 
+impl Default for AllMangaSource {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl AllMangaSource {
     pub fn with_api_url(api_url: String) -> Self {
         let mut headers = header::HeaderMap::new();
         headers.insert("User-Agent", header::HeaderValue::from_static("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"));
@@ -647,7 +655,7 @@ mod tests {
         assert_eq!(page.manga_list.len(), 1);
         assert_eq!(page.manga_list[0].title, "Test Manga English");
         assert_eq!(page.manga_list[0].url, "/manga/123");
-        assert_eq!(page.has_next_page, true);
+        assert!(page.has_next_page);
     }
 
     #[tokio::test]
@@ -741,7 +749,7 @@ mod tests {
         assert_eq!(updated.description.unwrap(), "A description");
         assert_eq!(updated.author.unwrap(), "Author 1, Author 2");
         assert_eq!(updated.genre.unwrap().len(), 1);
-        assert_eq!(updated.initialized, true);
+        assert!(updated.initialized);
     }
 
     #[tokio::test]

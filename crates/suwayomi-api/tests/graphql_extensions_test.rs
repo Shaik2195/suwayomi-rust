@@ -147,8 +147,5 @@ async fn test_extensions_graphql() {
     let data = resp_json
         .get("data")
         .expect("Missing data in uninstall mutation");
-    assert_eq!(
-        data.get("uninstallExtension").unwrap().as_bool().unwrap(),
-        true
-    );
+    assert!(data.get("uninstallExtension").unwrap().as_bool().unwrap());
 }

@@ -28,7 +28,15 @@ impl MangaDexSource {
             api_url: "https://api.mangadex.org".to_string(),
         }
     }
+}
 
+impl Default for MangaDexSource {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl MangaDexSource {
     pub fn with_api_url(api_url: String) -> Self {
         let mut headers = header::HeaderMap::new();
         headers.insert("User-Agent", header::HeaderValue::from_static("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"));
@@ -189,17 +197,7 @@ impl MangaDexSource {
                 }
             }
 
-            let thumbnail_url = if let Some(cover_id) = cover_art_id {
-                // In a real implementation we would fetch the cover file name from the API,
-                // but for simplicity we will just construct the URL with a placeholder.
-                // According to mangadex docs, cover is https://uploads.mangadex.org/covers/{manga.id}/{cover.file_name}
-                // However, without the filename, we can't fully construct it here without another API call.
-                // We'll leave it as None or a placeholder for now.
-                // Since this is a basic implementation, we'll just store the ID and fetch the real URL in get_manga_details
-                Some(format!("cover:{}", cover_id))
-            } else {
-                None
-            };
+            let thumbnail_url = cover_art_id.map(|cover_id| format!("cover:{}", cover_id));
 
             manga_list.push(Manga {
                 id: 0,
@@ -520,7 +518,7 @@ mod tests {
         assert_eq!(page.manga_list.len(), 1);
         assert_eq!(page.manga_list[0].title, "Test Manga");
         assert_eq!(page.manga_list[0].url, "/manga/123");
-        assert_eq!(page.has_next_page, false);
+        assert!(!page.has_next_page);
     }
 
     #[tokio::test]

@@ -74,7 +74,15 @@ impl JsExtensionRuntime {
 
         Self { sender: tx }
     }
+}
 
+impl Default for JsExtensionRuntime {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl JsExtensionRuntime {
     fn call_js_and_deserialize<T: serde::de::DeserializeOwned>(
         context: &mut Context,
         function_name: &str,

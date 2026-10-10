@@ -595,10 +595,10 @@ mod tests {
         write_varint(sub_msg.len() as u64, &mut ext_msg);
         ext_msg.extend_from_slice(&sub_msg);
 
-        write_varint((5 << 3) | 0, &mut ext_msg);
+        write_varint(5 << 3, &mut ext_msg);
         write_varint(42, &mut ext_msg);
         write_string(6, "1.2.4", &mut ext_msg);
-        write_varint((7 << 3) | 0, &mut ext_msg);
+        write_varint(7 << 3, &mut ext_msg);
         write_varint(1, &mut ext_msg);
 
         let mut source_msg = Vec::new();

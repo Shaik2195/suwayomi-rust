@@ -70,7 +70,7 @@ async fn main() -> anyhow::Result<()> {
     let app = suwayomi_api::create_router(state);
 
     // Start background download workers
-    let storage = suwayomi_downloader::storage::ChapterStorage::new(&data_dir.join("downloads"));
+    let storage = suwayomi_downloader::storage::ChapterStorage::new(data_dir.join("downloads"));
 
     // We instantiate a generic JsExtensionRuntime and JsMangaSource just to satisfy the downloader worker pool compilation
     // In a real application, the source instance is retrieved dynamically per chapter/manga based on source_id

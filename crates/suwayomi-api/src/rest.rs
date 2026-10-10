@@ -34,36 +34,6 @@ pub async fn get_manga(
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_get_referer_header() {
-        assert_eq!(
-            get_referer_header("https://allmanga.to/image.jpg"),
-            Some("https://allmanga.to")
-        );
-        assert_eq!(
-            get_referer_header("https://cdn.allanime.day/image.jpg"),
-            Some("https://allmanga.to")
-        );
-        assert_eq!(
-            get_referer_header("https://mkissa.com/image.jpg"),
-            Some("https://allmanga.to")
-        );
-        assert_eq!(
-            get_referer_header("https://uploads.mangadex.org/data/123/456.jpg"),
-            Some("https://mangadex.org")
-        );
-        assert_eq!(
-            get_referer_header("https://s2.mangadex.network/data/123/456.jpg"),
-            Some("https://mangadex.org")
-        );
-        assert_eq!(get_referer_header("https://example.com/image.jpg"), None);
-    }
-}
-
 pub async fn get_manga_thumbnail(
     State(state): State<AppState>,
     Path(id): Path<i64>,
@@ -266,5 +236,35 @@ pub async fn get_categories(
     match repo.get_categories().await {
         Ok(categories) => Ok(Json(categories)),
         Err(_) => Err(StatusCode::INTERNAL_SERVER_ERROR),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_get_referer_header() {
+        assert_eq!(
+            get_referer_header("https://allmanga.to/image.jpg"),
+            Some("https://allmanga.to")
+        );
+        assert_eq!(
+            get_referer_header("https://cdn.allanime.day/image.jpg"),
+            Some("https://allmanga.to")
+        );
+        assert_eq!(
+            get_referer_header("https://mkissa.com/image.jpg"),
+            Some("https://allmanga.to")
+        );
+        assert_eq!(
+            get_referer_header("https://uploads.mangadex.org/data/123/456.jpg"),
+            Some("https://mangadex.org")
+        );
+        assert_eq!(
+            get_referer_header("https://s2.mangadex.network/data/123/456.jpg"),
+            Some("https://mangadex.org")
+        );
+        assert_eq!(get_referer_header("https://example.com/image.jpg"), None);
     }
 }

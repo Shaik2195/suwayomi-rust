@@ -34,9 +34,9 @@ impl From<models::MangaStatus> for MangaStatus {
     }
 }
 
-impl Into<models::MangaStatus> for MangaStatus {
-    fn into(self) -> models::MangaStatus {
-        match self {
+impl From<MangaStatus> for models::MangaStatus {
+    fn from(status: MangaStatus) -> Self {
+        match status {
             MangaStatus::Unknown => models::MangaStatus::Unknown,
             MangaStatus::Ongoing => models::MangaStatus::Ongoing,
             MangaStatus::Completed => models::MangaStatus::Completed,
@@ -98,21 +98,21 @@ impl From<models::Manga> for Manga {
     }
 }
 
-impl Into<models::Manga> for Manga {
-    fn into(self) -> models::Manga {
+impl From<Manga> for models::Manga {
+    fn from(manga: Manga) -> Self {
         models::Manga {
-            id: self.id,
-            source_id: self.source_id,
-            url: self.url,
-            title: self.title,
-            artist: self.artist,
-            author: self.author,
-            description: self.description,
-            genre: self.genre,
-            status: self.status.into(),
-            thumbnail_url: self.thumbnail_url,
-            update_strategy: self.update_strategy,
-            initialized: self.initialized,
+            id: manga.id,
+            source_id: manga.source_id,
+            url: manga.url,
+            title: manga.title,
+            artist: manga.artist,
+            author: manga.author,
+            description: manga.description,
+            genre: manga.genre,
+            status: manga.status.into(),
+            thumbnail_url: manga.thumbnail_url,
+            update_strategy: manga.update_strategy,
+            initialized: manga.initialized,
         }
     }
 }
@@ -166,21 +166,21 @@ impl From<models::Chapter> for Chapter {
     }
 }
 
-impl Into<models::Chapter> for Chapter {
-    fn into(self) -> models::Chapter {
+impl From<Chapter> for models::Chapter {
+    fn from(chapter: Chapter) -> Self {
         models::Chapter {
-            id: self.id,
-            manga_id: self.manga_id,
-            url: self.url,
-            name: self.name,
-            date_upload: self.date_upload,
-            chapter_number: self.chapter_number,
-            scanlator: self.scanlator,
-            read: self.read,
-            bookmark: self.bookmark,
-            last_page_read: self.last_page_read,
-            date_fetch: self.date_fetch,
-            source_order: self.source_order,
+            id: chapter.id,
+            manga_id: chapter.manga_id,
+            url: chapter.url,
+            name: chapter.name,
+            date_upload: chapter.date_upload,
+            chapter_number: chapter.chapter_number,
+            scanlator: chapter.scanlator,
+            read: chapter.read,
+            bookmark: chapter.bookmark,
+            last_page_read: chapter.last_page_read,
+            date_fetch: chapter.date_fetch,
+            source_order: chapter.source_order,
         }
     }
 }
@@ -204,13 +204,13 @@ impl From<models::Category> for Category {
     }
 }
 
-impl Into<models::Category> for Category {
-    fn into(self) -> models::Category {
+impl From<Category> for models::Category {
+    fn from(category: Category) -> Self {
         models::Category {
-            id: self.id,
-            name: self.name,
-            order: self.order,
-            flags: self.flags,
+            id: category.id,
+            name: category.name,
+            order: category.order,
+            flags: category.flags,
         }
     }
 }
@@ -578,7 +578,7 @@ impl QueryRoot {
             async_graphql::Error::new(format!("Source {} not found", manga.source_id))
         })?;
 
-        let chapter_model: suwayomi_core::models::Chapter = chapter.into();
+        let chapter_model: suwayomi_core::models::Chapter = chapter;
         let pages = source
             .get_page_list(&chapter_model)
             .await
