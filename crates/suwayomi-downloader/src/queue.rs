@@ -28,7 +28,6 @@ impl Default for DownloadQueue {
 }
 
 impl DownloadQueue {
-
     pub fn subscribe(&self) -> broadcast::Receiver<DownloadEvent> {
         self.progress_tx.subscribe()
     }
