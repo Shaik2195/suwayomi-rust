@@ -326,6 +326,7 @@ impl MangaSource for AllMangaSource {
 
         if let Some(data) = graphql_response.data {
             if let Some(details) = data.manga {
+                manga.title = details.english_name.unwrap_or(details.name);
                 manga.description = details.description;
                 if let Some(authors) = details.authors {
                     manga.author = Some(authors.join(", "));
@@ -585,7 +586,8 @@ mod tests {
                             "description": "A description",
                             "authors": ["Author 1", "Author 2"],
                             "genres": ["Action"],
-                            "status": "Ongoing"
+                            "status": "Ongoing",
+                            "englishName": "Test English"
                         }
                     }
                 }"#);
@@ -612,6 +614,7 @@ mod tests {
         if let Err(e) = &result { println!("Error: {:?}", e); }
         assert!(result.is_ok());
         let updated = result.unwrap();
+        assert_eq!(updated.title, "Test English");
         assert_eq!(updated.description.unwrap(), "A description");
         assert_eq!(updated.author.unwrap(), "Author 1, Author 2");
         assert_eq!(updated.genre.unwrap().len(), 1);
