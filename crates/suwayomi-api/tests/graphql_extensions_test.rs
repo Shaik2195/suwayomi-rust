@@ -86,4 +86,60 @@ async fn test_extensions_graphql() {
     assert!(repos.is_array());
     assert_eq!(repos.as_array().unwrap().len(), 1);
     assert_eq!(repos[0]["name"], "Mock Repo");
+
+    // Test install mutation (should fail because repo is invalid, but schema matches)
+    let mutation = r#"
+    mutation {
+        installExtension(pkgName: "eu.kanade.tachiyomi.extension.en.mock") {
+            pkgName
+            name
+        }
+    }
+    "#;
+
+    let body = serde_json::json!({
+        "query": mutation
+    });
+
+    let request = Request::builder()
+        .uri("/api/graphql")
+        .method("POST")
+        .header("content-type", "application/json")
+        .body(Body::from(serde_json::to_vec(&body).unwrap()))
+        .unwrap();
+
+    let response = app.clone().oneshot(request).await.unwrap();
+    assert_eq!(response.status(), StatusCode::OK);
+
+    let body_bytes = response.into_body().collect().await.unwrap().to_bytes();
+    let resp_json: serde_json::Value = serde_json::from_slice(&body_bytes).unwrap();
+    assert!(resp_json.get("errors").is_some());
+
+    // Test uninstall mutation (should fail/return false because it's not installed)
+    let mutation = r#"
+    mutation {
+        uninstallExtension(pkgName: "eu.kanade.tachiyomi.extension.en.mock")
+    }
+    "#;
+
+    let body = serde_json::json!({
+        "query": mutation
+    });
+
+    let request = Request::builder()
+        .uri("/api/graphql")
+        .method("POST")
+        .header("content-type", "application/json")
+        .body(Body::from(serde_json::to_vec(&body).unwrap()))
+        .unwrap();
+
+    let response = app.clone().oneshot(request).await.unwrap();
+    assert_eq!(response.status(), StatusCode::OK);
+
+    let body_bytes = response.into_body().collect().await.unwrap().to_bytes();
+    let resp_json: serde_json::Value = serde_json::from_slice(&body_bytes).unwrap();
+    
+    // We expect successful execution of the mutation but it returns true even if nothing was uninstalled.
+    let data = resp_json.get("data").expect("Missing data in uninstall mutation");
+    assert_eq!(data.get("uninstallExtension").unwrap().as_bool().unwrap(), true);
 }

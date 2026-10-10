@@ -183,6 +183,9 @@
                     iconUrl
                     isNsfw
                 }
+                installedExtensions {
+                    pkgName
+                }
             }
         `;
 
@@ -233,6 +236,8 @@
                 
                 if (result.data) {
                     allExtensions = result.data.availableExtensions || [];
+                    const installedExtensions = result.data.installedExtensions || [];
+                    window.installedPkgNames = new Set(installedExtensions.map(e => e.pkgName));
                     renderExtensions(allExtensions);
                 } else if (result.errors) {
                     console.error('GraphQL errors:', result.errors);
@@ -241,6 +246,67 @@
             } catch (error) {
                 console.error('Error fetching extensions:', error);
                 document.getElementById('server-info').innerText = 'Failed to load extensions.';
+            }
+        }
+
+        async function installExtension(pkgName) {
+            const btn = document.getElementById(`ext-btn-${pkgName.replace(/\./g, '-')}`);
+            if (btn) {
+                btn.innerText = 'Installing...';
+                btn.disabled = true;
+            }
+            try {
+                const mutation = `mutation { installExtension(pkgName: "${pkgName}") { pkgName name } }`;
+                const result = await graphQLRequest(mutation);
+                if (result.data && result.data.installExtension) {
+                    if (!window.installedPkgNames) window.installedPkgNames = new Set();
+                    window.installedPkgNames.add(pkgName);
+                    renderExtensions(allExtensions); // Re-render to update button state
+                } else {
+                    console.error('Install failed:', result.errors);
+                    alert('Install failed: ' + (result.errors ? result.errors[0].message : 'Unknown error'));
+                    if (btn) {
+                        btn.innerText = 'Install';
+                        btn.disabled = false;
+                    }
+                }
+            } catch (e) {
+                console.error(e);
+                alert('Install error: ' + e.message);
+                if (btn) {
+                    btn.innerText = 'Install';
+                    btn.disabled = false;
+                }
+            }
+        }
+
+        async function uninstallExtension(pkgName) {
+            const btn = document.getElementById(`ext-btn-${pkgName.replace(/\./g, '-')}`);
+            if (btn) {
+                btn.innerText = 'Uninstalling...';
+                btn.disabled = true;
+            }
+            try {
+                const mutation = `mutation { uninstallExtension(pkgName: "${pkgName}") }`;
+                const result = await graphQLRequest(mutation);
+                if (result.data && result.data.uninstallExtension) {
+                    if (window.installedPkgNames) window.installedPkgNames.delete(pkgName);
+                    renderExtensions(allExtensions); // Re-render to update button state
+                } else {
+                    console.error('Uninstall failed:', result.errors);
+                    alert('Uninstall failed: ' + (result.errors ? result.errors[0].message : 'Unknown error'));
+                    if (btn) {
+                        btn.innerText = 'Uninstall';
+                        btn.disabled = false;
+                    }
+                }
+            } catch (e) {
+                console.error(e);
+                alert('Uninstall error: ' + e.message);
+                if (btn) {
+                    btn.innerText = 'Uninstall';
+                    btn.disabled = false;
+                }
             }
         }
 
@@ -292,18 +358,28 @@
                 // Highlight AllManga logic if search matches
                 const highlightStyle = (ext.pkgName === 'eu.kanade.tachiyomi.extension.en.allanime' || title.toLowerCase().includes('allmanga') || title.toLowerCase().includes('allanime')) ? 'border: 2px solid var(--primary-color);' : '';
                 
+                const isInstalled = window.installedPkgNames && window.installedPkgNames.has(ext.pkgName);
+                const btnId = `ext-btn-${ext.pkgName.replace(/\./g, '-')}`;
+                
+                let buttonHtml;
+                if (isInstalled) {
+                    buttonHtml = `<button id="${btnId}" style="margin-top: 1rem; width: 100%; padding: 0.5rem; background: #d9534f; color: white; border: none; border-radius: 4px; font-weight: bold; cursor: pointer;" onclick="uninstallExtension('${ext.pkgName}')">Uninstall</button>`;
+                } else {
+                    buttonHtml = `<button id="${btnId}" style="margin-top: 1rem; width: 100%; padding: 0.5rem; background: var(--primary-color); color: var(--bg-color); border: none; border-radius: 4px; font-weight: bold; cursor: pointer;" onclick="installExtension('${ext.pkgName}')">Install</button>`;
+                }
+
                 return `
                 <div class="manga-card" style="padding: 1rem; ${highlightStyle}">
                     <div style="display: flex; align-items: center; gap: 1rem;">
                         <img src="${icon}" alt="${title}" style="width: 48px; height: 48px; border-radius: 8px;" onerror="this.src='data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiPjxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbGw9IiMyYTJhMmEiLz48L3N2Zz4='">
                         <div>
-                            <h3 class="manga-title" style="margin:0; font-size: 1.1rem;" title="${title}">${title}</h3>
+                            <h3 class="manga-title" style="margin:0; font-size: 1.1rem;" title="${title}">${title} ${isInstalled ? '<span style="color: var(--primary-color); font-size: 0.8rem;">(Installed)</span>' : ''}</h3>
                             <p class="manga-author" style="margin: 0.2rem 0; font-size: 0.8rem;">${pkg}</p>
                             <span style="background: var(--border-color); padding: 0.2rem 0.4rem; border-radius: 4px; font-size: 0.75rem;">${lang}</span>
                             <span style="background: var(--border-color); padding: 0.2rem 0.4rem; border-radius: 4px; font-size: 0.75rem;">v${version}</span>
                         </div>
                     </div>
-                    <button style="margin-top: 1rem; width: 100%; padding: 0.5rem; background: var(--primary-color); color: var(--bg-color); border: none; border-radius: 4px; font-weight: bold; cursor: pointer;" onclick="alert('Install functionality not implemented')">Install</button>
+                    ${buttonHtml}
                 </div>
             `}).join('');
         }

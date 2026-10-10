@@ -3,9 +3,15 @@ use suwayomi_core::error::{Result, SuwayomiError};
 use reqwest;
 use std::io::Read;
 use flate2::read::GzDecoder;
+use std::sync::Arc;
+use tokio::sync::RwLock;
+use std::path::PathBuf;
+use crate::loader::ExtensionLoader;
 
 pub struct ExtensionRegistry {
     pub repos: Vec<ExtensionRepo>,
+    pub installed: Arc<RwLock<Vec<ExtensionListing>>>,
+    pub extensions_dir: PathBuf,
 }
 
 fn decode_varint(bytes: &[u8], pos: &mut usize) -> Option<u64> {
@@ -302,7 +308,57 @@ fn parse_protobuf(bytes: &[u8]) -> Option<Vec<ExtensionListing>> {
 
 impl ExtensionRegistry {
     pub fn new(repos: Vec<ExtensionRepo>) -> Self {
-        Self { repos }
+        Self::with_dir(repos, PathBuf::from("./data/extensions"))
+    }
+
+    pub fn with_dir(repos: Vec<ExtensionRepo>, dir: PathBuf) -> Self {
+        // TODO: Optionally scan `dir` to populate `installed` on startup
+        Self {
+            repos,
+            installed: Arc::new(RwLock::new(Vec::new())),
+            extensions_dir: dir,
+        }
+    }
+
+    pub async fn install_extension(&self, pkg_name: &str) -> Result<ExtensionListing> {
+        let available = self.get_available_extensions().await?;
+        let listing = available.into_iter().find(|e| e.pkg_name == pkg_name)
+            .ok_or_else(|| SuwayomiError::Extension(format!("Extension {} not found", pkg_name)))?;
+
+        let bytes = ExtensionLoader::download_extension(&listing).await?;
+        tokio::fs::create_dir_all(&self.extensions_dir).await
+            .map_err(|e| SuwayomiError::Extension(format!("Failed to create extensions directory: {}", e)))?;
+        
+        let file_path = self.extensions_dir.join(format!("{}.apk", pkg_name));
+        tokio::fs::write(&file_path, &bytes).await
+            .map_err(|e| SuwayomiError::Extension(format!("Failed to write apk file: {}", e)))?;
+
+        // Verify the APK
+        ExtensionLoader::inspect_archive(&bytes)?;
+
+        let mut installed = self.installed.write().await;
+        if !installed.iter().any(|e| e.pkg_name == pkg_name) {
+            installed.push(listing.clone());
+        }
+
+        Ok(listing)
+    }
+
+    pub async fn uninstall_extension(&self, pkg_name: &str) -> Result<bool> {
+        let file_path = self.extensions_dir.join(format!("{}.apk", pkg_name));
+        if file_path.exists() {
+            tokio::fs::remove_file(&file_path).await
+                .map_err(|e| SuwayomiError::Extension(format!("Failed to remove apk file: {}", e)))?;
+        }
+
+        let mut installed = self.installed.write().await;
+        installed.retain(|e| e.pkg_name != pkg_name);
+
+        Ok(true)
+    }
+
+    pub async fn get_installed_extensions(&self) -> Vec<ExtensionListing> {
+        self.installed.read().await.clone()
     }
 
     pub async fn fetch_repo_index(repo: &ExtensionRepo) -> Result<Vec<ExtensionListing>> {
@@ -469,5 +525,81 @@ mod tests {
         
         assert_eq!(listings.len(), 1);
         assert_eq!(listings[0].name, "MockExt");
+    }
+
+    #[tokio::test]
+    async fn test_install_uninstall_extension() {
+        let temp_dir = tempfile::tempdir().unwrap();
+        
+        let server = MockServer::start();
+        
+        // Mock APK download route
+        let mut mock_apk_bytes = Vec::new();
+        {
+            use zip::write::{FileOptions, ZipWriter};
+            let mut zip = ZipWriter::new(std::io::Cursor::new(&mut mock_apk_bytes));
+            let options = FileOptions::default().compression_method(zip::CompressionMethod::Stored);
+            zip.start_file("index.js", options).unwrap();
+            zip.write_all(b"console.log('test');").unwrap();
+            zip.finish().unwrap();
+        }
+
+        let apk_url = server.url("/mock.apk");
+        server.mock(|when, then| {
+            when.method(GET).path("/mock.apk");
+            then.status(200).body(mock_apk_bytes.clone());
+        });
+
+        // Mock index.json
+        server.mock(|when, then| {
+            when.method(GET).path("/index.min.json");
+            then.status(200)
+                .header("content-type", "application/json")
+                .body(format!(r#"[
+                    {{
+                        "pkg_name": "eu.kanade.tachiyomi.extension.en.mock",
+                        "name": "Mock",
+                        "version_name": "1.2.3",
+                        "version_code": 12,
+                        "lang": "en",
+                        "is_nsfw": false,
+                        "apk_url": "{}",
+                        "icon_url": "/icon/mock.png"
+                    }}
+                ]"#, apk_url));
+        });
+
+        let repo = ExtensionRepo {
+            name: "Test Repo".to_string(),
+            url: server.url("/index.min.json"),
+        };
+
+        let registry = ExtensionRegistry::with_dir(vec![repo], temp_dir.path().to_path_buf());
+
+        // Initial state
+        let installed = registry.get_installed_extensions().await;
+        assert_eq!(installed.len(), 0);
+
+        // Install
+        let listing = registry.install_extension("eu.kanade.tachiyomi.extension.en.mock").await.unwrap();
+        assert_eq!(listing.name, "Mock");
+
+        let installed = registry.get_installed_extensions().await;
+        assert_eq!(installed.len(), 1);
+        assert_eq!(installed[0].pkg_name, "eu.kanade.tachiyomi.extension.en.mock");
+
+        // Verify file exists
+        let apk_path = temp_dir.path().join("eu.kanade.tachiyomi.extension.en.mock.apk");
+        assert!(apk_path.exists());
+
+        // Uninstall
+        let success = registry.uninstall_extension("eu.kanade.tachiyomi.extension.en.mock").await.unwrap();
+        assert!(success);
+
+        let installed = registry.get_installed_extensions().await;
+        assert_eq!(installed.len(), 0);
+
+        // Verify file deleted
+        assert!(!apk_path.exists());
     }
 }

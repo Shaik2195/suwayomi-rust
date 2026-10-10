@@ -407,9 +407,10 @@ impl QueryRoot {
     }
 
     #[graphql(name = "installedExtensions")]
-    async fn installed_extensions(&self, _ctx: &Context<'_>) -> async_graphql::Result<Vec<ExtensionListing>> {
-        // Currently installed extensions are not fully tracked; returning an empty list for now.
-        Ok(vec![])
+    async fn installed_extensions(&self, ctx: &Context<'_>) -> async_graphql::Result<Vec<ExtensionListing>> {
+        let registry = ctx.data::<std::sync::Arc<suwayomi_extensions::registry::ExtensionRegistry>>()?;
+        let installed = registry.get_installed_extensions().await;
+        Ok(installed.into_iter().map(|ext| ext.into()).collect())
     }
 
     #[graphql(name = "extensionRepos")]
@@ -423,6 +424,22 @@ pub struct MutationRoot;
 
 #[Object]
 impl MutationRoot {
+    #[graphql(name = "installExtension")]
+    async fn install_extension(&self, ctx: &Context<'_>, pkg_name: String) -> async_graphql::Result<ExtensionListing> {
+        let registry = ctx.data::<std::sync::Arc<suwayomi_extensions::registry::ExtensionRegistry>>()?;
+        let listing = registry.install_extension(&pkg_name).await
+            .map_err(|e| async_graphql::Error::new(e.to_string()))?;
+        Ok(listing.into())
+    }
+
+    #[graphql(name = "uninstallExtension")]
+    async fn uninstall_extension(&self, ctx: &Context<'_>, pkg_name: String) -> async_graphql::Result<bool> {
+        let registry = ctx.data::<std::sync::Arc<suwayomi_extensions::registry::ExtensionRegistry>>()?;
+        let result = registry.uninstall_extension(&pkg_name).await
+            .map_err(|e| async_graphql::Error::new(e.to_string()))?;
+        Ok(result)
+    }
+
     async fn update_chapter_read(
         &self,
         ctx: &Context<'_>,
