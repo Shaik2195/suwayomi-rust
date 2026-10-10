@@ -393,6 +393,21 @@ impl ExtensionRegistry {
         Ok(listings)
     }
 
+
+    pub fn get_source(&self, source_id: i64) -> Option<std::sync::Arc<dyn suwayomi_core::traits::MangaSource>> {
+        if source_id == crate::sources::allmanga::AllMangaSource::SOURCE_ID {
+            return Some(std::sync::Arc::new(crate::sources::allmanga::AllMangaSource::new()));
+        }
+        None
+    }
+
+    pub fn get_source_by_pkg(&self, pkg_name: &str) -> Option<std::sync::Arc<dyn suwayomi_core::traits::MangaSource>> {
+        if pkg_name == crate::sources::allmanga::AllMangaSource::PKG_NAME {
+            return Some(std::sync::Arc::new(crate::sources::allmanga::AllMangaSource::new()));
+        }
+        None
+    }
+
     pub async fn get_available_extensions(&self) -> Result<Vec<ExtensionListing>> {
         let mut all_listings = Vec::new();
         
