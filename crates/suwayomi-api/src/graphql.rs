@@ -3093,7 +3093,7 @@ impl MutationRoot {
                 pkg_name: pkg_name.clone(),
                 name: pkg_name,
                 lang: "".to_string(),
-                version_code_long: 0,
+                version_code_long: 0.into(),
                 version_code: 0,
                 version_name: "".to_string(),
                 icon_url: "".to_string(),
