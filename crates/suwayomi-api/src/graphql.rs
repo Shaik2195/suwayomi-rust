@@ -879,6 +879,53 @@ pub struct ExtensionStoreNodeList {
     pub total_count: i32,
 }
 
+#[derive(InputObject, Clone, Default)]
+pub struct MetaConditionInput {
+    pub key: Option<String>,
+    pub value: Option<String>,
+}
+
+#[derive(InputObject, Clone, Default)]
+pub struct MetaFilterInput {
+    pub key: Option<StringFilterInput>,
+    pub value: Option<StringFilterInput>,
+    pub and: Option<Vec<MetaFilterInput>>,
+    pub or: Option<Vec<MetaFilterInput>>,
+    pub not: Option<Box<MetaFilterInput>>,
+}
+
+#[derive(Enum, Copy, Clone, Eq, PartialEq)]
+pub enum MetaOrderBy {
+    #[graphql(name = "KEY")]
+    Key,
+    #[graphql(name = "VALUE")]
+    Value,
+}
+
+#[derive(InputObject, Clone)]
+pub struct MetaOrderInput {
+    pub by: MetaOrderBy,
+    #[graphql(name = "byType")]
+    pub by_type: Option<SortOrder>,
+}
+
+#[derive(SimpleObject, Clone)]
+#[graphql(name = "GlobalMetaType")]
+pub struct GlobalMetaType {
+    pub key: String,
+    pub value: String,
+}
+
+#[derive(SimpleObject, Clone, Default)]
+#[graphql(name = "GlobalMetaNodeList")]
+pub struct GlobalMetaNodeList {
+    pub nodes: Vec<GlobalMetaType>,
+    #[graphql(name = "pageInfo")]
+    pub page_info: PageInfo,
+    #[graphql(name = "totalCount")]
+    pub total_count: i32,
+}
+
 // Backward-compatibility listing types
 #[derive(SimpleObject, Clone)]
 pub struct ExtensionListing {
@@ -1791,6 +1838,25 @@ impl QueryRoot {
         })
     }
 
+    #[graphql(name = "metas")]
+    async fn metas(
+        &self,
+        _condition: Option<MetaConditionInput>,
+        _filter: Option<MetaFilterInput>,
+        _order: Option<Vec<MetaOrderInput>>,
+        _before: Option<Cursor>,
+        _after: Option<Cursor>,
+        _first: Option<i32>,
+        _last: Option<i32>,
+        _offset: Option<i32>,
+    ) -> async_graphql::Result<GlobalMetaNodeList> {
+        Ok(GlobalMetaNodeList {
+            nodes: vec![],
+            page_info: PageInfo::default(),
+            total_count: 0,
+        })
+    }
+
     #[graphql(name = "settings")]
     async fn settings(&self) -> async_graphql::Result<SettingsType> {
         Ok(SettingsType {
@@ -2352,6 +2418,48 @@ pub struct DeleteCategoryMetasPayload {
     pub metas: Option<Vec<CategoryMetaType>>,
 }
 
+#[derive(InputObject, Default, Clone)]
+pub struct SetMangaMetasItemInput {
+    #[graphql(name = "mangaIds")]
+    pub manga_ids: Vec<i64>,
+    pub metas: Vec<MetaInput>,
+}
+
+#[derive(InputObject, Default, Clone)]
+pub struct SetMangaMetasInput {
+    #[graphql(name = "clientMutationId")]
+    pub client_mutation_id: Option<String>,
+    pub items: Vec<SetMangaMetasItemInput>,
+}
+
+#[derive(SimpleObject, Default, Clone)]
+pub struct SetMangaMetasPayload {
+    #[graphql(name = "clientMutationId")]
+    pub client_mutation_id: Option<String>,
+    pub metas: Option<Vec<MangaMetaType>>,
+}
+
+#[derive(InputObject, Default, Clone)]
+pub struct DeleteMangaMetasItemInput {
+    #[graphql(name = "mangaIds")]
+    pub manga_ids: Vec<i64>,
+    pub keys: Option<Vec<String>>,
+}
+
+#[derive(InputObject, Default, Clone)]
+pub struct DeleteMangaMetasInput {
+    #[graphql(name = "clientMutationId")]
+    pub client_mutation_id: Option<String>,
+    pub items: Vec<DeleteMangaMetasItemInput>,
+}
+
+#[derive(SimpleObject, Default, Clone)]
+pub struct DeleteMangaMetasPayload {
+    #[graphql(name = "clientMutationId")]
+    pub client_mutation_id: Option<String>,
+    pub metas: Option<Vec<MangaMetaType>>,
+}
+
 #[derive(SimpleObject, Clone)]
 pub struct FetchExtensionsPayload {
     #[graphql(name = "clientMutationId")]
@@ -2710,6 +2818,40 @@ impl MutationRoot {
     ) -> async_graphql::Result<DeleteCategoryMetasPayload> {
         Ok(DeleteCategoryMetasPayload {
             categories: None,
+            client_mutation_id: input.client_mutation_id,
+            metas: Some(vec![]),
+        })
+    }
+
+    #[graphql(name = "setMangaMetas")]
+    async fn set_manga_metas(
+        &self,
+        input: SetMangaMetasInput,
+    ) -> async_graphql::Result<SetMangaMetasPayload> {
+        let mut metas = Vec::new();
+        for item in &input.items {
+            for manga_id in &item.manga_ids {
+                for meta in &item.metas {
+                    metas.push(MangaMetaType {
+                        manga_id: *manga_id,
+                        key: meta.key.clone(),
+                        value: meta.value.clone(),
+                    });
+                }
+            }
+        }
+        Ok(SetMangaMetasPayload {
+            client_mutation_id: input.client_mutation_id,
+            metas: Some(metas),
+        })
+    }
+
+    #[graphql(name = "deleteMangaMetas")]
+    async fn delete_manga_metas(
+        &self,
+        input: DeleteMangaMetasInput,
+    ) -> async_graphql::Result<DeleteMangaMetasPayload> {
+        Ok(DeleteMangaMetasPayload {
             client_mutation_id: input.client_mutation_id,
             metas: Some(vec![]),
         })
