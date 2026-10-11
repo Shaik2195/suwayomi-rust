@@ -1,3 +1,5 @@
+#![allow(clippy::too_many_arguments)]
+
 use async_graphql::{Context, EmptySubscription, Enum, InputObject, Object, Schema, SimpleObject};
 use async_graphql_axum::{GraphQLProtocol, GraphQLRequest, GraphQLResponse, GraphQLWebSocket};
 use axum::{

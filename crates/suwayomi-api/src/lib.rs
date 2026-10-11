@@ -1,3 +1,5 @@
+#![allow(clippy::too_many_arguments)]
+
 pub mod graphql;
 pub mod middleware;
 pub mod rest;
