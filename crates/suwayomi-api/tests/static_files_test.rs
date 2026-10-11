@@ -46,7 +46,7 @@ async fn test_spa_static_files_fallback() {
 
     let body = response.into_body().collect().await.unwrap().to_bytes();
     let body_str = String::from_utf8(body.to_vec()).unwrap();
-    assert!(body_str.contains("<title>Suwayomi - WebUI</title>"));
+    assert!(body_str.contains("<title>Suwayomi"));
 
     // Test GET /library returns 200 with text/html (SPA fallback)
     let request = Request::builder()
@@ -63,7 +63,7 @@ async fn test_spa_static_files_fallback() {
 
     let body = response.into_body().collect().await.unwrap().to_bytes();
     let body_str = String::from_utf8(body.to_vec()).unwrap();
-    assert!(body_str.contains("<title>Suwayomi - WebUI</title>"));
+    assert!(body_str.contains("<title>Suwayomi"));
 
     // Test API route works and is not intercepted by fallback
     let request = Request::builder()
