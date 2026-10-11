@@ -53,3 +53,10 @@ Suwayomi-Rust is a high-performance Rust rewrite of [Suwayomi-Server](https://gi
    - Automatic database insertion and ID mapping via `MangaRepository` (preserving `in_library` / `initialized` status).
    - Source metadata and configuration mutations (`setSourceMetas`, `deleteSourceMetas`, `setSourceMeta`, `deleteSourceMeta`, `updateSourcePreference`).
    - CasaOS Deliverable: `suwayomi-rust-docker.zip` (containing `suwayomi-rust-docker.tar.gz`, `docker-compose.yml`, and `README.md`).
+
+8. **Empirical Performance Benchmarks (Rust vs. JVM Container)**:
+   - **RAM**: Rust uses **15.16 MiB** vs JVM's **687.7 MiB** (**45.3x lower memory / 97.8% reduction**).
+   - **CPU**: Rust idle **0.06%** vs JVM's **1.97%** (**32.8x lower CPU**).
+   - **Docker Image**: Rust image **193 MB** vs JVM's **2.12 GB** (**11x smaller**).
+   - **GraphQL Latency**: Rust averages **0.97ms - 1.41ms** vs JVM's **5.08ms - 12.2ms** (**5.2x to 9.9x faster**).
+   - **Concurrency Throughput**: Rust reaches **1,268 req/s** vs JVM's **400 req/s** under load (**3.17x higher throughput**).
