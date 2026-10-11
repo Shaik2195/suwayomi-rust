@@ -1,6 +1,4 @@
-use async_graphql::{
-    Context, EmptySubscription, Enum, InputObject, Object, Schema, SimpleObject,
-};
+use async_graphql::{Context, EmptySubscription, Enum, InputObject, Object, Schema, SimpleObject};
 use async_graphql_axum::{GraphQLProtocol, GraphQLRequest, GraphQLResponse, GraphQLWebSocket};
 use axum::{
     extract::{FromRequestParts, State, WebSocketUpgrade},
@@ -879,7 +877,6 @@ pub struct ExtensionStoreNodeList {
     pub total_count: i32,
 }
 
-
 // Backward-compatibility listing types
 #[derive(SimpleObject, Clone)]
 pub struct ExtensionListing {
@@ -1667,7 +1664,10 @@ impl QueryRoot {
                 apk_name: None,
                 jar_url: None,
                 repo: None,
-                store_index_url: Some("https://raw.githubusercontent.com/keiyoushi/extensions/repo/index.min.json".to_string()),
+                store_index_url: Some(
+                    "https://raw.githubusercontent.com/keiyoushi/extensions/repo/index.min.json"
+                        .to_string(),
+                ),
                 content_warning: if ext.is_nsfw {
                     ContentWarning::Nsfw
                 } else {
@@ -2402,7 +2402,10 @@ impl MutationRoot {
                 client_mutation_id: input.client_mutation_id,
             })
         } else {
-            Err(async_graphql::Error::new(format!("Manga {} not found", input.id)))
+            Err(async_graphql::Error::new(format!(
+                "Manga {} not found",
+                input.id
+            )))
         }
     }
 
@@ -2716,7 +2719,8 @@ impl MutationRoot {
         ctx: &Context<'_>,
         input: FetchExtensionsInput,
     ) -> async_graphql::Result<FetchExtensionsPayload> {
-        let registry = ctx.data::<std::sync::Arc<suwayomi_extensions::registry::ExtensionRegistry>>()?;
+        let registry =
+            ctx.data::<std::sync::Arc<suwayomi_extensions::registry::ExtensionRegistry>>()?;
         let _ = registry.get_available_extensions().await;
         let exts = registry.get_installed_extensions().await;
         let mut nodes = Vec::new();
@@ -2733,7 +2737,10 @@ impl MutationRoot {
                 apk_name: None,
                 jar_url: None,
                 repo: None,
-                store_index_url: Some("https://raw.githubusercontent.com/keiyoushi/extensions/repo/index.min.json".to_string()),
+                store_index_url: Some(
+                    "https://raw.githubusercontent.com/keiyoushi/extensions/repo/index.min.json"
+                        .to_string(),
+                ),
                 content_warning: if ext.is_nsfw {
                     ContentWarning::Nsfw
                 } else {
