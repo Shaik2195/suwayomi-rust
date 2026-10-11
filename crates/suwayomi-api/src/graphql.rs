@@ -464,7 +464,7 @@ impl MangaType {
         let last_read = chapters
             .iter()
             .filter(|c| c.read)
-            .last()
+            .next_back()
             .cloned()
             .map(ChapterType::from);
         let latest_uploaded = chapters.first().cloned().map(ChapterType::from);

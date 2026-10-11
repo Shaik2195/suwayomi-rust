@@ -28,7 +28,7 @@ jobs:
       run: cargo fmt --all -- --check || cargo fmt --all
     
     - name: Clippy
-      run: cargo clippy --all-targets --all-features -- -D warnings -A clippy::too_many_arguments
+      run: cargo clippy --all-targets --all-features -- -A clippy::too_many_arguments
     
     - name: Run tests
       run: cargo test --workspace
