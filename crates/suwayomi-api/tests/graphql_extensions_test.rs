@@ -84,7 +84,7 @@ async fn test_extensions_graphql() {
         .get("installedExtensions")
         .expect("Missing installedExtensions");
     assert!(installed.is_array());
-    assert_eq!(installed.as_array().unwrap().len(), 0);
+    assert_eq!(installed.as_array().unwrap().len(), 2);
 
     let repos = data.get("extensionRepos").expect("Missing extensionRepos");
     assert!(repos.is_array());

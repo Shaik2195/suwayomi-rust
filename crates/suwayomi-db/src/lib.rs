@@ -96,5 +96,42 @@ mod tests {
             .unwrap();
         assert!(updated_chap.read);
         assert_eq!(updated_chap.last_page_read, 10);
+
+        use repositories::{MangaMetaRepository, ServerSettingsRepository};
+        let meta_repo = MangaMetaRepository::new(&pool);
+        meta_repo
+            .upsert(manga_id, "reading_mode", "webtoon")
+            .await
+            .expect("Failed to upsert manga meta");
+
+        let metas = meta_repo
+            .get_by_manga_id(manga_id)
+            .await
+            .expect("Failed to get manga meta");
+        assert_eq!(metas.len(), 1);
+        assert_eq!(metas[0].key, "reading_mode");
+        assert_eq!(metas[0].value, "webtoon");
+
+        meta_repo
+            .delete(manga_id, "reading_mode")
+            .await
+            .expect("Failed to delete manga meta");
+        let metas_after = meta_repo
+            .get_by_manga_id(manga_id)
+            .await
+            .expect("Failed to get manga meta");
+        assert_eq!(metas_after.len(), 0);
+
+        let settings_repo = ServerSettingsRepository::new(&pool);
+        settings_repo
+            .upsert("theme", "dark")
+            .await
+            .expect("Failed to upsert server setting");
+        let val = settings_repo
+            .get_by_key("theme")
+            .await
+            .expect("Failed to get setting")
+            .unwrap();
+        assert_eq!(val, "dark");
     }
 }

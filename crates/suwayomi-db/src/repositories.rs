@@ -182,6 +182,125 @@ impl<'a> MangaRepository<'a> {
     }
 }
 
+// Manga Meta Repository
+pub struct MangaMetaRepository<'a> {
+    pool: &'a SqlitePool,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct MangaMeta {
+    pub manga_id: i64,
+    pub key: String,
+    pub value: String,
+}
+
+impl<'a> MangaMetaRepository<'a> {
+    pub fn new(pool: &'a SqlitePool) -> Self {
+        Self { pool }
+    }
+
+    pub async fn get_by_manga_id(&self, manga_id: i64) -> Result<Vec<MangaMeta>> {
+        let rows = sqlx::query("SELECT manga_id, key, value FROM manga_meta WHERE manga_id = ?")
+            .bind(manga_id)
+            .fetch_all(self.pool)
+            .await
+            .map_err(|e| SuwayomiError::Database(e.to_string()))?;
+
+        Ok(rows
+            .iter()
+            .map(|r| MangaMeta {
+                manga_id: r.get("manga_id"),
+                key: r.get("key"),
+                value: r.get("value"),
+            })
+            .collect())
+    }
+
+    pub async fn get_all(&self) -> Result<Vec<MangaMeta>> {
+        let rows = sqlx::query("SELECT manga_id, key, value FROM manga_meta")
+            .fetch_all(self.pool)
+            .await
+            .map_err(|e| SuwayomiError::Database(e.to_string()))?;
+
+        Ok(rows
+            .iter()
+            .map(|r| MangaMeta {
+                manga_id: r.get("manga_id"),
+                key: r.get("key"),
+                value: r.get("value"),
+            })
+            .collect())
+    }
+
+    pub async fn upsert(&self, manga_id: i64, key: &str, value: &str) -> Result<()> {
+        sqlx::query(
+            "INSERT INTO manga_meta (manga_id, key, value) VALUES (?, ?, ?) ON CONFLICT(manga_id, key) DO UPDATE SET value = excluded.value",
+        )
+        .bind(manga_id)
+        .bind(key)
+        .bind(value)
+        .execute(self.pool)
+        .await
+        .map_err(|e| SuwayomiError::Database(e.to_string()))?;
+        Ok(())
+    }
+
+    pub async fn delete(&self, manga_id: i64, key: &str) -> Result<()> {
+        sqlx::query("DELETE FROM manga_meta WHERE manga_id = ? AND key = ?")
+            .bind(manga_id)
+            .bind(key)
+            .execute(self.pool)
+            .await
+            .map_err(|e| SuwayomiError::Database(e.to_string()))?;
+        Ok(())
+    }
+}
+
+// Server Settings Repository
+pub struct ServerSettingsRepository<'a> {
+    pool: &'a SqlitePool,
+}
+
+impl<'a> ServerSettingsRepository<'a> {
+    pub fn new(pool: &'a SqlitePool) -> Self {
+        Self { pool }
+    }
+
+    pub async fn get_all(&self) -> Result<Vec<(String, String)>> {
+        let rows = sqlx::query("SELECT key, value FROM server_settings")
+            .fetch_all(self.pool)
+            .await
+            .map_err(|e| SuwayomiError::Database(e.to_string()))?;
+
+        Ok(rows
+            .iter()
+            .map(|r| (r.get("key"), r.get("value")))
+            .collect())
+    }
+
+    pub async fn get_by_key(&self, key: &str) -> Result<Option<String>> {
+        let row = sqlx::query("SELECT value FROM server_settings WHERE key = ?")
+            .bind(key)
+            .fetch_optional(self.pool)
+            .await
+            .map_err(|e| SuwayomiError::Database(e.to_string()))?;
+
+        Ok(row.map(|r| r.get("value")))
+    }
+
+    pub async fn upsert(&self, key: &str, value: &str) -> Result<()> {
+        sqlx::query(
+            "INSERT INTO server_settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value",
+        )
+        .bind(key)
+        .bind(value)
+        .execute(self.pool)
+        .await
+        .map_err(|e| SuwayomiError::Database(e.to_string()))?;
+        Ok(())
+    }
+}
+
 // Chapter Repository
 pub struct ChapterRepository<'a> {
     pool: &'a SqlitePool,

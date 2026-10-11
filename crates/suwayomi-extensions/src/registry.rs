@@ -358,15 +358,44 @@ fn parse_protobuf(bytes: &[u8]) -> Option<Vec<ExtensionListing>> {
 }
 
 impl ExtensionRegistry {
-    pub fn new(repos: Vec<ExtensionRepo>) -> Self {
+    pub fn new(mut repos: Vec<ExtensionRepo>) -> Self {
+        if repos.is_empty() {
+            repos.push(ExtensionRepo {
+                name: "Keiyoushi".to_string(),
+                url: "https://raw.githubusercontent.com/keiyoushi/extensions/repo/index.min.json"
+                    .to_string(),
+            });
+        }
         Self::with_dir(repos, PathBuf::from("./data/extensions"))
     }
 
     pub fn with_dir(repos: Vec<ExtensionRepo>, dir: PathBuf) -> Self {
-        // TODO: Optionally scan `dir` to populate `installed` on startup
+        let default_installed = vec![
+            ExtensionListing {
+                pkg_name: crate::sources::allmanga::AllMangaSource::PKG_NAME.to_string(),
+                name: "AllAnime".to_string(),
+                version_name: "1.0.0".to_string(),
+                version_code: 1,
+                lang: "en".to_string(),
+                is_nsfw: false,
+                apk_url: "".to_string(),
+                icon_url: "".to_string(),
+            },
+            ExtensionListing {
+                pkg_name: crate::sources::mangadex::MangaDexSource::PKG_NAME.to_string(),
+                name: "MangaDex".to_string(),
+                version_name: "1.0.0".to_string(),
+                version_code: 1,
+                lang: "all".to_string(),
+                is_nsfw: false,
+                apk_url: "".to_string(),
+                icon_url: "".to_string(),
+            },
+        ];
+
         Self {
             repos,
-            installed: Arc::new(RwLock::new(Vec::new())),
+            installed: Arc::new(RwLock::new(default_installed)),
             extensions_dir: dir,
         }
     }
@@ -684,8 +713,8 @@ mod tests {
         let registry = ExtensionRegistry::with_dir(vec![repo], temp_dir.path().to_path_buf());
 
         // Initial state
-        let installed = registry.get_installed_extensions().await;
-        assert_eq!(installed.len(), 0);
+        let initial_installed = registry.get_installed_extensions().await;
+        let initial_len = initial_installed.len();
 
         // Install
         let listing = registry
@@ -695,11 +724,10 @@ mod tests {
         assert_eq!(listing.name, "Mock");
 
         let installed = registry.get_installed_extensions().await;
-        assert_eq!(installed.len(), 1);
-        assert_eq!(
-            installed[0].pkg_name,
-            "eu.kanade.tachiyomi.extension.en.mock"
-        );
+        assert_eq!(installed.len(), initial_len + 1);
+        assert!(installed
+            .iter()
+            .any(|e| e.pkg_name == "eu.kanade.tachiyomi.extension.en.mock"));
 
         // Verify file exists
         let apk_path = temp_dir
@@ -715,7 +743,7 @@ mod tests {
         assert!(success);
 
         let installed = registry.get_installed_extensions().await;
-        assert_eq!(installed.len(), 0);
+        assert_eq!(installed.len(), initial_len);
 
         // Verify file deleted
         assert!(!apk_path.exists());
