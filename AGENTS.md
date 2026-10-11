@@ -60,3 +60,14 @@ Suwayomi-Rust is a high-performance Rust rewrite of [Suwayomi-Server](https://gi
    - **Docker Image**: Rust image **193 MB** vs JVM's **2.12 GB** (**11x smaller**).
    - **GraphQL Latency**: Rust averages **0.97ms - 1.41ms** vs JVM's **5.08ms - 12.2ms** (**5.2x to 9.9x faster**).
    - **Concurrency Throughput**: Rust reaches **1,268 req/s** vs JVM's **400 req/s** under load (**3.17x higher throughput**).
+
+9. **Resolved WebUI Integration & Reader Defects**:
+   - **Defect 1 (Broken image placeholders)**: Fixed with dynamic referer headers and direct authoritative origin resolution (`uploads.mangadex.org/data/{hash}/{file}`).
+   - **Defect 2 (Remove manga from library fails)**: Implemented Relay `updateMangas` mutation correctly unsetting `in_library` and purging non-library records.
+   - **Defect 3 & 4 (Download & Mark as read error in library)**: WebUI batch mutation `UPDATE_CHAPTERS` requires `deleteDownloadedChapters`, `deleteDownloadedChapter`, and `trackProgress` mutations, plus `chapter.manga` populated with updated `unreadCount`.
+   - **Defect 5 (Migrate button error)**: `MangaType::from_model` populates source metadata (`SourceType`) from `manga.source_id`, preventing `unknown` language fallback.
+   - **Defect 6 (Reader tap zone overlay always visible)**: Patched reader config default `tapZone.showPreview = false` permanently in `ReaderService`.
+   - **Defect 7 (Reader infinite scroll beyond page 6 & frozen bottom bar)**: Stored and returned real `page_count` in SQLite & GraphQL (instead of 0), unbound placeholder height to prevent 280,000px flex explosion, and made ref callbacks safe for both callback and object refs.
+   - **Defect 8 (Track button does nothing)**: Implemented `TrackerNodeList` Relay format and rich `TrackerType` with `isLoggedIn`, `authUrl`, etc.
+   - **Defect 9 (Change category does nothing)**: Seeded SQLite with default category (`id: 1, 'Default'`) and migration to satisfy foreign key constraints.
+
