@@ -120,6 +120,24 @@ pub struct StringFilterInput {
     #[graphql(name = "equalTo")]
     pub equal_to: Option<String>,
     pub includes: Option<String>,
+    #[graphql(name = "in")]
+    pub in_list: Option<Vec<String>>,
+    #[graphql(name = "notIn")]
+    pub not_in_list: Option<Vec<String>>,
+}
+
+#[derive(InputObject, Default, Clone)]
+pub struct DoubleFilterInput {
+    #[graphql(name = "equalTo")]
+    pub equal_to: Option<f64>,
+    #[graphql(name = "greaterThan")]
+    pub greater_than: Option<f64>,
+    #[graphql(name = "lessThan")]
+    pub less_than: Option<f64>,
+    #[graphql(name = "in")]
+    pub in_list: Option<Vec<f64>>,
+    #[graphql(name = "notIn")]
+    pub not_in_list: Option<Vec<f64>>,
 }
 
 #[derive(InputObject, Default, Clone)]
@@ -353,6 +371,22 @@ pub struct MangaFilterInput {
     #[graphql(name = "sourceId")]
     pub source_id: Option<LongFilterInput>,
     pub title: Option<StringFilterInput>,
+    pub author: Option<StringFilterInput>,
+    pub artist: Option<StringFilterInput>,
+    pub description: Option<StringFilterInput>,
+    pub genre: Option<StringFilterInput>,
+    pub initialized: Option<BooleanFilterInput>,
+    #[graphql(name = "inLibraryAt")]
+    pub in_library_at: Option<LongFilterInput>,
+    #[graphql(name = "lastFetchedAt")]
+    pub last_fetched_at: Option<LongFilterInput>,
+    #[graphql(name = "chaptersLastFetchedAt")]
+    pub chapters_last_fetched_at: Option<LongFilterInput>,
+    pub url: Option<StringFilterInput>,
+    #[graphql(name = "realUrl")]
+    pub real_url: Option<StringFilterInput>,
+    #[graphql(name = "thumbnailUrl")]
+    pub thumbnail_url: Option<StringFilterInput>,
 }
 
 #[derive(Enum, Copy, Clone, Eq, PartialEq)]
@@ -617,6 +651,19 @@ pub struct ChapterFilterInput {
     pub fetched_at: Option<LongFilterInput>,
     #[graphql(name = "uploadDate")]
     pub upload_date: Option<LongFilterInput>,
+    pub scanlator: Option<StringFilterInput>,
+    pub name: Option<StringFilterInput>,
+    #[graphql(name = "chapterNumber")]
+    pub chapter_number: Option<DoubleFilterInput>,
+    #[graphql(name = "lastPageRead")]
+    pub last_page_read: Option<IntFilterInput>,
+    #[graphql(name = "pageCount")]
+    pub page_count: Option<IntFilterInput>,
+    #[graphql(name = "sourceOrder")]
+    pub source_order: Option<IntFilterInput>,
+    pub url: Option<StringFilterInput>,
+    #[graphql(name = "realUrl")]
+    pub real_url: Option<StringFilterInput>,
 }
 
 #[derive(SimpleObject, Clone)]
