@@ -33,6 +33,8 @@ async fn test_spa_static_files_fallback() {
         schema,
         download_queue,
         extension_registry,
+        data_dir: std::path::PathBuf::from("./data"),
+        page_cache: suwayomi_api::PageCache::new(),
     };
 
     let app = create_router(state);

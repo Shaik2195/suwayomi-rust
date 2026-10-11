@@ -10,8 +10,8 @@ use sqlx::SqlitePool;
 
 use suwayomi_core::models;
 use suwayomi_db::repositories::{
-    CategoryRepository, ChapterRepository, MangaMetaRepository, MangaRepository,
-    ServerSettingsRepository, SourceMetaRepository,
+    CategoryRepository, ChapterRepository, MangaCategoryRepository, MangaMetaRepository,
+    MangaRepository, ServerSettingsRepository, SourceMetaRepository,
 };
 
 // --- Custom Scalars ---
@@ -109,6 +109,10 @@ pub struct IntFilterInput {
     pub greater_than: Option<i32>,
     #[graphql(name = "lessThan")]
     pub less_than: Option<i32>,
+    #[graphql(name = "in")]
+    pub in_list: Option<Vec<i32>>,
+    #[graphql(name = "notIn")]
+    pub not_in_list: Option<Vec<i32>>,
 }
 
 #[derive(InputObject, Default, Clone)]
@@ -247,6 +251,18 @@ pub struct CategoryNodeList {
     pub page_info: PageInfo,
     #[graphql(name = "totalCount")]
     pub total_count: i32,
+}
+
+#[derive(SimpleObject, Clone)]
+#[graphql(name = "TrackerType")]
+pub struct TrackerType {
+    pub id: i32,
+    pub name: String,
+    pub text: String,
+    #[graphql(name = "isLoggedIn")]
+    pub is_logged_in: bool,
+    #[graphql(name = "authUrl")]
+    pub auth_url: Option<String>,
 }
 
 // --- Manga ---
@@ -484,6 +500,8 @@ impl MangaType {
         let total_count = chapters.len() as i32;
         let chapter_nodes: Vec<ChapterType> = chapters.into_iter().map(ChapterType::from).collect();
 
+        let thumbnail_url = Some(format!("/api/v1/manga/{}/thumbnail", manga.id));
+
         Self {
             id: manga.id,
             source_id: manga.source_id.into(),
@@ -494,7 +512,7 @@ impl MangaType {
             description: manga.description,
             genre: manga.genre.unwrap_or_default(),
             status: manga.status.into(),
-            thumbnail_url: manga.thumbnail_url,
+            thumbnail_url,
             thumbnail_url_last_fetched: None,
             update_strategy: UpdateStrategy::AlwaysUpdate,
             initialized: manga.initialized,
@@ -1577,6 +1595,89 @@ impl QueryRoot {
         })
     }
 
+    #[graphql(name = "trackers")]
+    async fn trackers(&self) -> async_graphql::Result<Vec<TrackerType>> {
+        Ok(vec![
+            TrackerType {
+                id: 1,
+                name: "ANILIST".to_string(),
+                text: "AniList".to_string(),
+                is_logged_in: false,
+                auth_url: Some("https://anilist.co/api/v2/oauth/authorize".to_string()),
+            },
+            TrackerType {
+                id: 2,
+                name: "MYANIMELIST".to_string(),
+                text: "MyAnimeList".to_string(),
+                is_logged_in: false,
+                auth_url: Some("https://myanimelist.net/v1/oauth2/authorize".to_string()),
+            },
+            TrackerType {
+                id: 3,
+                name: "KITSU".to_string(),
+                text: "Kitsu".to_string(),
+                is_logged_in: false,
+                auth_url: Some("https://kitsu.app/api/oauth/authorize".to_string()),
+            },
+            TrackerType {
+                id: 4,
+                name: "SHIKIMORI".to_string(),
+                text: "Shikimori".to_string(),
+                is_logged_in: false,
+                auth_url: Some("https://shikimori.one/oauth/authorize".to_string()),
+            },
+            TrackerType {
+                id: 5,
+                name: "BANGUMI".to_string(),
+                text: "Bangumi".to_string(),
+                is_logged_in: false,
+                auth_url: Some("https://bgm.tv/oauth/authorize".to_string()),
+            },
+        ])
+    }
+
+    #[graphql(name = "tracker")]
+    async fn tracker(&self, id: i32) -> async_graphql::Result<Option<TrackerType>> {
+        let trackers = vec![
+            TrackerType {
+                id: 1,
+                name: "ANILIST".to_string(),
+                text: "AniList".to_string(),
+                is_logged_in: false,
+                auth_url: Some("https://anilist.co/api/v2/oauth/authorize".to_string()),
+            },
+            TrackerType {
+                id: 2,
+                name: "MYANIMELIST".to_string(),
+                text: "MyAnimeList".to_string(),
+                is_logged_in: false,
+                auth_url: Some("https://myanimelist.net/v1/oauth2/authorize".to_string()),
+            },
+            TrackerType {
+                id: 3,
+                name: "KITSU".to_string(),
+                text: "Kitsu".to_string(),
+                is_logged_in: false,
+                auth_url: Some("https://kitsu.app/api/oauth/authorize".to_string()),
+            },
+            TrackerType {
+                id: 4,
+                name: "SHIKIMORI".to_string(),
+                text: "Shikimori".to_string(),
+                is_logged_in: false,
+                auth_url: Some("https://shikimori.one/oauth/authorize".to_string()),
+            },
+            TrackerType {
+                id: 5,
+                name: "BANGUMI".to_string(),
+                text: "Bangumi".to_string(),
+                is_logged_in: false,
+                auth_url: Some("https://bgm.tv/oauth/authorize".to_string()),
+            },
+        ];
+        Ok(trackers.into_iter().find(|t| t.id == id))
+    }
+
     #[graphql(name = "categories")]
     async fn categories(
         &self,
@@ -1655,6 +1756,7 @@ impl QueryRoot {
         let raw_mangas = manga_repo.get_library().await?;
         let mut nodes = Vec::new();
 
+        let mc_repo = MangaCategoryRepository::new(pool);
         for m in raw_mangas {
             if let Some(ref cond) = condition {
                 if let Some(in_lib) = cond.in_library {
@@ -1679,6 +1781,15 @@ impl QueryRoot {
                         value: meta.value,
                     })
                     .collect();
+            }
+            if let Ok(cats) = mc_repo.get_categories_for_manga(m.id).await {
+                let cat_nodes: Vec<CategoryType> = cats.into_iter().map(|c| CategoryType::from_model(c, 1)).collect();
+                let count = cat_nodes.len() as i32;
+                manga_type.categories = CategoryNodeList {
+                    nodes: cat_nodes,
+                    page_info: PageInfo::default(),
+                    total_count: count,
+                };
             }
             nodes.push(manga_type);
         }
@@ -1711,6 +1822,16 @@ impl QueryRoot {
                     })
                     .collect();
             }
+            let mc_repo = MangaCategoryRepository::new(pool);
+            if let Ok(cats) = mc_repo.get_categories_for_manga(id).await {
+                let cat_nodes: Vec<CategoryType> = cats.into_iter().map(|c| CategoryType::from_model(c, 1)).collect();
+                let count = cat_nodes.len() as i32;
+                manga_type.categories = CategoryNodeList {
+                    nodes: cat_nodes,
+                    page_info: PageInfo::default(),
+                    total_count: count,
+                };
+            }
             Ok(Some(manga_type))
         } else {
             Ok(None)
@@ -1722,7 +1843,7 @@ impl QueryRoot {
         &self,
         ctx: &Context<'_>,
         condition: Option<ChapterConditionInput>,
-        _filter: Option<ChapterFilterInput>,
+        filter: Option<ChapterFilterInput>,
         _order: Option<Vec<ChapterOrderInput>>,
         _before: Option<Cursor>,
         _after: Option<Cursor>,
@@ -1734,7 +1855,7 @@ impl QueryRoot {
         let repo = ChapterRepository::new(pool);
         let manga_repo = MangaRepository::new(pool);
 
-        let chapters = if let Some(cond) = condition {
+        let mut chapters = if let Some(cond) = condition {
             if let Some(manga_id) = cond.manga_id {
                 repo.get_by_manga_id(manga_id).await?
             } else if let Some(id) = cond.id {
@@ -1742,9 +1863,62 @@ impl QueryRoot {
             } else {
                 repo.get_all().await?
             }
+        } else if let Some(ref filt) = filter {
+            if let Some(ref mid_filt) = filt.manga_id {
+                if let Some(eq) = mid_filt.equal_to {
+                    repo.get_by_manga_id(eq as i64).await?
+                } else if let Some(ref in_mangas) = mid_filt.in_list {
+                    let mut all_c = Vec::new();
+                    for mid in in_mangas {
+                        if let Ok(c_list) = repo.get_by_manga_id(*mid as i64).await {
+                            all_c.extend(c_list);
+                        }
+                    }
+                    all_c
+                } else {
+                    repo.get_all().await?
+                }
+            } else {
+                repo.get_all().await?
+            }
         } else {
             repo.get_all().await?
         };
+
+        if let Some(filt) = filter {
+            if let Some(id_filt) = filt.id {
+                if let Some(eq) = id_filt.equal_to {
+                    chapters.retain(|c| c.id == eq as i64);
+                }
+                if let Some(in_ids) = &id_filt.in_list {
+                    chapters.retain(|c| in_ids.contains(&(c.id as i32)));
+                }
+                if let Some(not_in_ids) = &id_filt.not_in_list {
+                    chapters.retain(|c| !not_in_ids.contains(&(c.id as i32)));
+                }
+            }
+            if let Some(mid_filt) = filt.manga_id {
+                if let Some(eq) = mid_filt.equal_to {
+                    chapters.retain(|c| c.manga_id == eq as i64);
+                }
+                if let Some(in_mangas) = &mid_filt.in_list {
+                    chapters.retain(|c| in_mangas.contains(&(c.manga_id as i32)));
+                }
+                if let Some(not_in_mangas) = &mid_filt.not_in_list {
+                    chapters.retain(|c| !not_in_mangas.contains(&(c.manga_id as i32)));
+                }
+            }
+            if let Some(is_read_filt) = filt.is_read {
+                if let Some(eq) = is_read_filt.equal_to {
+                    chapters.retain(|c| c.read == eq);
+                }
+            }
+            if let Some(is_bm_filt) = filt.is_bookmarked {
+                if let Some(eq) = is_bm_filt.equal_to {
+                    chapters.retain(|c| c.bookmark == eq);
+                }
+            }
+        }
 
         let mut nodes: Vec<ChapterType> = Vec::new();
         for c in chapters {
@@ -2113,6 +2287,22 @@ impl QueryRoot {
             .map(|(key, value)| GlobalMetaType { key, value })
             .collect();
 
+        let default_metas = [
+            ("reader.tapZonesEnabled", "false"),
+            ("reader.navigationOverlay", "false"),
+            ("tapZonesEnabled", "false"),
+            ("navigationOverlay", "false"),
+        ];
+
+        for (k, v) in default_metas {
+            if !nodes.iter().any(|m| m.key == k) {
+                nodes.push(GlobalMetaType {
+                    key: k.to_string(),
+                    value: v.to_string(),
+                });
+            }
+        }
+
         if let Some(cond) = condition {
             if let Some(ref k) = cond.key {
                 nodes.retain(|m| &m.key == k);
@@ -2471,6 +2661,61 @@ pub struct UpdateMangaPayload {
     pub manga: Option<MangaType>,
     #[graphql(name = "clientMutationId")]
     pub client_mutation_id: Option<String>,
+}
+
+#[derive(InputObject, Default, Clone)]
+pub struct UpdateMangasInput {
+    #[graphql(name = "clientMutationId")]
+    pub client_mutation_id: Option<String>,
+    pub ids: Vec<i64>,
+    pub patch: Option<UpdateMangaPatchInput>,
+}
+
+#[derive(SimpleObject, Clone)]
+pub struct UpdateMangasPayload {
+    pub mangas: Option<Vec<MangaType>>,
+    #[graphql(name = "clientMutationId")]
+    pub client_mutation_id: Option<String>,
+}
+
+#[derive(InputObject, Default, Clone)]
+pub struct UpdateMangaCategoriesPatchInput {
+    #[graphql(name = "addToCategories")]
+    pub add_to_categories: Option<Vec<i64>>,
+    #[graphql(name = "clearCategories")]
+    pub clear_categories: Option<bool>,
+    #[graphql(name = "removeFromCategories")]
+    pub remove_from_categories: Option<Vec<i64>>,
+}
+
+#[derive(InputObject, Default, Clone)]
+pub struct UpdateMangasCategoriesInput {
+    #[graphql(name = "clientMutationId")]
+    pub client_mutation_id: Option<String>,
+    pub ids: Vec<i64>,
+    pub patch: Option<UpdateMangaCategoriesPatchInput>,
+}
+
+#[derive(SimpleObject, Clone)]
+pub struct UpdateMangasCategoriesPayload {
+    pub mangas: Option<Vec<MangaType>>,
+    #[graphql(name = "clientMutationId")]
+    pub client_mutation_id: Option<String>,
+}
+
+#[derive(InputObject, Default, Clone)]
+pub struct EnqueueChapterDownloadsInput {
+    #[graphql(name = "clientMutationId")]
+    pub client_mutation_id: Option<String>,
+    pub ids: Vec<i64>,
+}
+
+#[derive(SimpleObject, Clone)]
+pub struct EnqueueChapterDownloadsPayload {
+    #[graphql(name = "clientMutationId")]
+    pub client_mutation_id: Option<String>,
+    #[graphql(name = "downloadStatus")]
+    pub download_status: Option<DownloadStatus>,
 }
 
 #[derive(InputObject, Default, Clone)]
@@ -2886,6 +3131,127 @@ impl MutationRoot {
         Ok(UpdateMangaPayload {
             manga: manga_type,
             client_mutation_id: input.client_mutation_id,
+        })
+    }
+
+    #[graphql(name = "updateMangas")]
+    async fn update_mangas_mutation(
+        &self,
+        ctx: &Context<'_>,
+        input: UpdateMangasInput,
+    ) -> async_graphql::Result<UpdateMangasPayload> {
+        let pool = ctx.data::<SqlitePool>()?;
+        let repo = MangaRepository::new(pool);
+        let chapter_repo = ChapterRepository::new(pool);
+        let mc_repo = MangaCategoryRepository::new(pool);
+
+        let mut updated = Vec::new();
+        for id in &input.ids {
+            if let Some(ref patch) = input.patch {
+                if let Some(in_library) = patch.in_library {
+                    repo.update_in_library(*id, in_library).await?;
+                }
+            }
+            if let Some(m) = repo.get_by_id(*id).await? {
+                let chapters = chapter_repo.get_by_manga_id(m.id).await?;
+                let mut manga_type = MangaType::from_model(m, chapters);
+                if let Ok(cats) = mc_repo.get_categories_for_manga(*id).await {
+                    let cat_nodes: Vec<CategoryType> = cats.into_iter().map(|c| CategoryType::from_model(c, 1)).collect();
+                    let count = cat_nodes.len() as i32;
+                    manga_type.categories = CategoryNodeList {
+                        nodes: cat_nodes,
+                        page_info: PageInfo::default(),
+                        total_count: count,
+                    };
+                }
+                updated.push(manga_type);
+            }
+        }
+        Ok(UpdateMangasPayload {
+            mangas: Some(updated),
+            client_mutation_id: input.client_mutation_id,
+        })
+    }
+
+    #[graphql(name = "updateMangasCategories")]
+    async fn update_mangas_categories_mutation(
+        &self,
+        ctx: &Context<'_>,
+        input: UpdateMangasCategoriesInput,
+    ) -> async_graphql::Result<UpdateMangasCategoriesPayload> {
+        let pool = ctx.data::<SqlitePool>()?;
+        let mc_repo = MangaCategoryRepository::new(pool);
+        let manga_repo = MangaRepository::new(pool);
+        let chapter_repo = ChapterRepository::new(pool);
+
+        let mut updated_mangas = Vec::new();
+
+        for manga_id in &input.ids {
+            if let Some(ref patch) = input.patch {
+                if patch.clear_categories == Some(true) {
+                    mc_repo.clear_manga_categories(*manga_id).await?;
+                }
+                if let Some(ref remove_ids) = patch.remove_from_categories {
+                    for cid in remove_ids {
+                        mc_repo.remove_manga_from_category(*manga_id, *cid).await?;
+                    }
+                }
+                if let Some(ref add_ids) = patch.add_to_categories {
+                    for cid in add_ids {
+                        mc_repo.add_manga_to_category(*manga_id, *cid).await?;
+                    }
+                }
+            }
+
+            if let Some(m) = manga_repo.get_by_id(*manga_id).await? {
+                let chapters = chapter_repo.get_by_manga_id(m.id).await?;
+                let mut manga_type = MangaType::from_model(m, chapters);
+                if let Ok(cats) = mc_repo.get_categories_for_manga(*manga_id).await {
+                    let cat_nodes: Vec<CategoryType> = cats.into_iter().map(|c| CategoryType::from_model(c, 1)).collect();
+                    let count = cat_nodes.len() as i32;
+                    manga_type.categories = CategoryNodeList {
+                        nodes: cat_nodes,
+                        page_info: PageInfo::default(),
+                        total_count: count,
+                    };
+                }
+                updated_mangas.push(manga_type);
+            }
+        }
+
+        Ok(UpdateMangasCategoriesPayload {
+            mangas: Some(updated_mangas),
+            client_mutation_id: input.client_mutation_id,
+        })
+    }
+
+    #[graphql(name = "enqueueChapterDownloads")]
+    async fn enqueue_chapter_downloads_mutation(
+        &self,
+        ctx: &Context<'_>,
+        input: EnqueueChapterDownloadsInput,
+    ) -> async_graphql::Result<EnqueueChapterDownloadsPayload> {
+        let pool = ctx.data::<SqlitePool>()?;
+        let chapter_repo = ChapterRepository::new(pool);
+        let queue = ctx.data::<suwayomi_downloader::queue::DownloadQueue>()?;
+
+        for id in &input.ids {
+            if let Ok(Some(chapter)) = chapter_repo.get_by_id(*id).await {
+                let item = suwayomi_core::models::DownloadQueueItem {
+                    chapter_id: chapter.id,
+                    manga_id: chapter.manga_id,
+                    status: suwayomi_core::models::DownloadStatus::Queued,
+                };
+                queue.enqueue(item).await;
+            }
+        }
+
+        Ok(EnqueueChapterDownloadsPayload {
+            client_mutation_id: input.client_mutation_id,
+            download_status: Some(DownloadStatus {
+                state: DownloaderState::Started,
+                queue: vec![],
+            }),
         })
     }
 

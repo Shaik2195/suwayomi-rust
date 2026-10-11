@@ -32,6 +32,8 @@ async fn test_graphql_about_parity() {
         schema,
         download_queue,
         extension_registry,
+        data_dir: std::path::PathBuf::from("./data"),
+        page_cache: suwayomi_api::PageCache::new(),
     };
 
     let app = create_router(state);
@@ -144,6 +146,8 @@ async fn test_graphql_websocket_upgrade() {
         schema,
         download_queue,
         extension_registry,
+        data_dir: std::path::PathBuf::from("./data"),
+        page_cache: suwayomi_api::PageCache::new(),
     };
 
     let app = create_router(state);

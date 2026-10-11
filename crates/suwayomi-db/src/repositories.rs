@@ -182,6 +182,85 @@ impl<'a> MangaRepository<'a> {
     }
 }
 
+// MangaCategory Repository
+pub struct MangaCategoryRepository<'a> {
+    pool: &'a SqlitePool,
+}
+
+impl<'a> MangaCategoryRepository<'a> {
+    pub fn new(pool: &'a SqlitePool) -> Self {
+        Self { pool }
+    }
+
+    pub async fn get_category_ids_for_manga(&self, manga_id: i64) -> Result<Vec<i64>> {
+        let rows = sqlx::query("SELECT category_id FROM manga_category WHERE manga_id = ?")
+            .bind(manga_id)
+            .fetch_all(self.pool)
+            .await
+            .map_err(|e| SuwayomiError::Database(e.to_string()))?;
+
+        Ok(rows.iter().map(|r| r.get("category_id")).collect())
+    }
+
+    pub async fn get_categories_for_manga(&self, manga_id: i64) -> Result<Vec<Category>> {
+        let rows = sqlx::query(
+            r#"
+            SELECT c.* FROM category c
+            INNER JOIN manga_category mc ON c.id = mc.category_id
+            WHERE mc.manga_id = ?
+            ORDER BY c.`order` ASC
+            "#,
+        )
+        .bind(manga_id)
+        .fetch_all(self.pool)
+        .await
+        .map_err(|e| SuwayomiError::Database(e.to_string()))?;
+
+        Ok(rows
+            .iter()
+            .map(|row| Category {
+                id: row.get("id"),
+                name: row.get("name"),
+                order: row.get("order"),
+                flags: row.get("flags"),
+            })
+            .collect())
+    }
+
+    pub async fn add_manga_to_category(&self, manga_id: i64, category_id: i64) -> Result<()> {
+        sqlx::query(
+            "INSERT INTO manga_category (manga_id, category_id) SELECT ?, ? WHERE NOT EXISTS (SELECT 1 FROM manga_category WHERE manga_id = ? AND category_id = ?)"
+        )
+        .bind(manga_id)
+        .bind(category_id)
+        .bind(manga_id)
+        .bind(category_id)
+        .execute(self.pool)
+        .await
+        .map_err(|e| SuwayomiError::Database(e.to_string()))?;
+        Ok(())
+    }
+
+    pub async fn remove_manga_from_category(&self, manga_id: i64, category_id: i64) -> Result<()> {
+        sqlx::query("DELETE FROM manga_category WHERE manga_id = ? AND category_id = ?")
+            .bind(manga_id)
+            .bind(category_id)
+            .execute(self.pool)
+            .await
+            .map_err(|e| SuwayomiError::Database(e.to_string()))?;
+        Ok(())
+    }
+
+    pub async fn clear_manga_categories(&self, manga_id: i64) -> Result<()> {
+        sqlx::query("DELETE FROM manga_category WHERE manga_id = ?")
+            .bind(manga_id)
+            .execute(self.pool)
+            .await
+            .map_err(|e| SuwayomiError::Database(e.to_string()))?;
+        Ok(())
+    }
+}
+
 // Manga Meta Repository
 pub struct MangaMetaRepository<'a> {
     pool: &'a SqlitePool,

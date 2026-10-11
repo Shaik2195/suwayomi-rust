@@ -37,6 +37,8 @@ async fn test_extensions_graphql() {
         schema,
         download_queue,
         extension_registry,
+        data_dir: std::path::PathBuf::from("./data"),
+        page_cache: suwayomi_api::PageCache::new(),
     };
 
     let app = create_router(state);
@@ -172,6 +174,8 @@ async fn test_relay_extensions_graphql() {
         schema,
         download_queue,
         extension_registry,
+        data_dir: std::path::PathBuf::from("./data"),
+        page_cache: suwayomi_api::PageCache::new(),
     };
 
     let app = create_router(state);

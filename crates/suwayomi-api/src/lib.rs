@@ -16,12 +16,85 @@ use suwayomi_downloader::queue::DownloadQueue;
 
 use crate::graphql::{AppSchema, MutationRoot, QueryRoot};
 
+use dashmap::DashMap;
+use std::path::PathBuf;
+use std::sync::Arc;
+use tokio::sync::Mutex;
+
+#[derive(Clone, Default)]
+pub struct PageCache {
+    pages: Arc<DashMap<i64, Vec<suwayomi_core::models::Page>>>,
+    fetch_locks: Arc<DashMap<i64, Arc<Mutex<()>>>>,
+}
+
+impl PageCache {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub async fn get_or_fetch_pages<F, Fut>(
+        &self,
+        chapter_id: i64,
+        data_dir: &std::path::Path,
+        fetch_fn: F,
+    ) -> Result<Vec<suwayomi_core::models::Page>, axum::http::StatusCode>
+    where
+        F: FnOnce() -> Fut,
+        Fut: std::future::Future<Output = Result<Vec<suwayomi_core::models::Page>, axum::http::StatusCode>>,
+    {
+        if let Some(pages) = self.pages.get(&chapter_id) {
+            return Ok(pages.clone());
+        }
+
+        let cache_dir = data_dir.join(format!("cache/pages/{}", chapter_id));
+        let pages_json_path = cache_dir.join("pages.json");
+        if let Ok(bytes) = tokio::fs::read(&pages_json_path).await {
+            if let Ok(pages) = serde_json::from_slice::<Vec<suwayomi_core::models::Page>>(&bytes) {
+                self.pages.insert(chapter_id, pages.clone());
+                return Ok(pages);
+            }
+        }
+
+        let lock = self
+            .fetch_locks
+            .entry(chapter_id)
+            .or_insert_with(|| Arc::new(Mutex::new(())))
+            .value()
+            .clone();
+
+        let _guard = lock.lock().await;
+
+        if let Some(pages) = self.pages.get(&chapter_id) {
+            return Ok(pages.clone());
+        }
+
+        if let Ok(bytes) = tokio::fs::read(&pages_json_path).await {
+            if let Ok(pages) = serde_json::from_slice::<Vec<suwayomi_core::models::Page>>(&bytes) {
+                self.pages.insert(chapter_id, pages.clone());
+                return Ok(pages);
+            }
+        }
+
+        let pages = fetch_fn().await?;
+
+        let _ = tokio::fs::create_dir_all(&cache_dir).await;
+        if let Ok(json_str) = serde_json::to_string(&pages) {
+            let _ = tokio::fs::write(&pages_json_path, json_str.as_bytes()).await;
+        }
+
+        self.pages.insert(chapter_id, pages.clone());
+        Ok(pages)
+    }
+}
+
 #[derive(Clone)]
 pub struct AppState {
     pub pool: SqlitePool,
     pub schema: AppSchema,
     pub download_queue: DownloadQueue,
     pub extension_registry: std::sync::Arc<suwayomi_extensions::registry::ExtensionRegistry>,
+    pub data_dir: PathBuf,
+    pub page_cache: PageCache,
 }
 
 pub fn create_router(state: AppState) -> Router {

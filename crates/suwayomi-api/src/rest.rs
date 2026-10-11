@@ -4,7 +4,6 @@ use axum::{
     response::IntoResponse,
     Json,
 };
-use std::path::PathBuf;
 use tokio::io::AsyncWriteExt;
 
 use suwayomi_db::repositories::{CategoryRepository, ChapterRepository, MangaRepository};
@@ -65,7 +64,7 @@ pub async fn get_manga_thumbnail(
 
     let thumbnail_url = manga.thumbnail_url.ok_or(StatusCode::NOT_FOUND)?;
 
-    let cache_dir = PathBuf::from("./data/cache/thumbnails");
+    let cache_dir = state.data_dir.join("cache/thumbnails");
     let _ = tokio::fs::create_dir_all(&cache_dir).await;
     let cache_file = cache_dir.join(id.to_string());
 
@@ -136,8 +135,8 @@ pub async fn get_chapter_page(
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
         .ok_or(StatusCode::NOT_FOUND)?;
 
-    let dl_path = PathBuf::from(format!(
-        "./data/downloads/{}/{}/{}.jpg",
+    let dl_path = state.data_dir.join(format!(
+        "downloads/{}/{}/{}.jpg",
         manga_id, chapter_id, page
     ));
     if let Ok(bytes) = tokio::fs::read(&dl_path).await {
@@ -152,7 +151,7 @@ pub async fn get_chapter_page(
         ));
     }
 
-    let cache_dir = PathBuf::from(format!("./data/cache/pages/{}", chapter_id));
+    let cache_dir = state.data_dir.join(format!("cache/pages/{}", chapter_id));
     let cache_file = cache_dir.join(page.to_string());
     if let Ok(bytes) = tokio::fs::read(&cache_file).await {
         let content_type = detect_content_type(&bytes, &cache_file.to_string_lossy());
@@ -166,15 +165,20 @@ pub async fn get_chapter_page(
         ));
     }
 
-    let source = state
-        .extension_registry
-        .get_source(manga.source_id)
-        .ok_or(StatusCode::NOT_FOUND)?;
+    let pages = state
+        .page_cache
+        .get_or_fetch_pages(chapter_id, &state.data_dir, || async {
+            let source = state
+                .extension_registry
+                .get_source(manga.source_id)
+                .ok_or(StatusCode::NOT_FOUND)?;
 
-    let pages = source
-        .get_page_list(&chapter)
-        .await
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+            source
+                .get_page_list(&chapter)
+                .await
+                .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)
+        })
+        .await?;
 
     let target_page = pages
         .into_iter()

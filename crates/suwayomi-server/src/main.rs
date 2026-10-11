@@ -69,6 +69,8 @@ async fn main() -> anyhow::Result<()> {
         schema,
         download_queue: download_queue.clone(),
         extension_registry,
+        data_dir: data_dir.clone(),
+        page_cache: suwayomi_api::PageCache::new(),
     };
     let app = suwayomi_api::create_router(state);
 
