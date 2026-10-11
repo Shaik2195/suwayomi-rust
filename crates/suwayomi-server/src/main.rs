@@ -51,9 +51,11 @@ async fn main() -> anyhow::Result<()> {
         name: "Keiyoushi".to_string(),
         url: "https://raw.githubusercontent.com/keiyoushi/extensions/repo/index.pb".to_string(),
     }];
-    let extension_registry = std::sync::Arc::new(
-        suwayomi_extensions::registry::ExtensionRegistry::with_dir(repos, data_dir.join("extensions")),
-    );
+    let extension_registry =
+        std::sync::Arc::new(suwayomi_extensions::registry::ExtensionRegistry::with_dir(
+            repos,
+            data_dir.join("extensions"),
+        ));
 
     // Build API router
     let download_queue = suwayomi_downloader::queue::DownloadQueue::new();

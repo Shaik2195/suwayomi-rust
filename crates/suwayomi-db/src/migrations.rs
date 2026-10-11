@@ -113,6 +113,14 @@ pub async fn run_migrations(pool: &SqlitePool) -> Result<()> {
             FOREIGN KEY(manga_id) REFERENCES manga(id) ON DELETE CASCADE
         );
         CREATE INDEX IF NOT EXISTS idx_manga_meta_manga_id ON manga_meta(manga_id);
+
+        CREATE TABLE IF NOT EXISTS source_meta (
+            source_id INTEGER NOT NULL,
+            key TEXT NOT NULL,
+            value TEXT NOT NULL,
+            PRIMARY KEY (source_id, key)
+        );
+        CREATE INDEX IF NOT EXISTS idx_source_meta_source_id ON source_meta(source_id);
         ",
     )
     .await
