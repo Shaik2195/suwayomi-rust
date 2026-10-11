@@ -149,3 +149,100 @@ async fn test_extensions_graphql() {
         .expect("Missing data in uninstall mutation");
     assert!(data.get("uninstallExtension").unwrap().as_bool().unwrap());
 }
+
+#[tokio::test]
+async fn test_relay_extensions_graphql() {
+    let temp_dir = tempfile::tempdir().unwrap();
+    let db_path = temp_dir.path().join("test_relay_ext.db");
+    let db_url = format!("sqlite://{}", db_path.to_str().unwrap());
+
+    let pool = create_sqlite_pool(&db_url).await.unwrap();
+    run_migrations(&pool).await.unwrap();
+
+    let download_queue = DownloadQueue::new();
+    let extension_registry = Arc::new(ExtensionRegistry::new(vec![]));
+    let schema = create_schema(
+        pool.clone(),
+        download_queue.clone(),
+        extension_registry.clone(),
+    );
+
+    let state = AppState {
+        pool,
+        schema,
+        download_queue,
+        extension_registry,
+    };
+
+    let app = create_router(state);
+
+    // 1. Test fetchExtensions mutation
+    let fetch_query = r#"
+    mutation {
+        fetchExtensions(input: {}) {
+            extensions {
+                pkgName
+                name
+                isInstalled
+                extensionStore {
+                    name
+                }
+            }
+            extensionStores {
+                name
+                extensions {
+                    totalCount
+                }
+            }
+        }
+    }
+    "#;
+
+    let request = Request::builder()
+        .uri("/api/graphql")
+        .method("POST")
+        .header("content-type", "application/json")
+        .body(Body::from(
+            serde_json::to_vec(&serde_json::json!({ "query": fetch_query })).unwrap(),
+        ))
+        .unwrap();
+
+    let response = app.clone().oneshot(request).await.unwrap();
+    assert_eq!(response.status(), StatusCode::OK);
+    let body_bytes = response.into_body().collect().await.unwrap().to_bytes();
+    let resp_json: serde_json::Value = serde_json::from_slice(&body_bytes).unwrap();
+    let data = resp_json.get("data").expect("Missing data in fetchExtensions");
+    let fetch_exts = data.get("fetchExtensions").unwrap();
+    let exts = fetch_exts.get("extensions").unwrap().as_array().unwrap();
+    assert!(exts.iter().any(|e| e["pkgName"] == "eu.kanade.tachiyomi.extension.en.allanime"));
+    assert!(exts.iter().any(|e| e["pkgName"] == "eu.kanade.tachiyomi.extension.all.mangadex"));
+
+    // 2. Test updateExtension mutation (uninstall)
+    let update_query = r#"
+    mutation {
+        updateExtension(input: { pkgName: "eu.kanade.tachiyomi.extension.en.allanime", uninstall: true }) {
+            extension {
+                pkgName
+                isInstalled
+            }
+        }
+    }
+    "#;
+
+    let request = Request::builder()
+        .uri("/api/graphql")
+        .method("POST")
+        .header("content-type", "application/json")
+        .body(Body::from(
+            serde_json::to_vec(&serde_json::json!({ "query": update_query })).unwrap(),
+        ))
+        .unwrap();
+
+    let response = app.clone().oneshot(request).await.unwrap();
+    assert_eq!(response.status(), StatusCode::OK);
+    let body_bytes = response.into_body().collect().await.unwrap().to_bytes();
+    let resp_json: serde_json::Value = serde_json::from_slice(&body_bytes).unwrap();
+    let data = resp_json.get("data").expect("Missing data in updateExtension");
+    let ext = &data["updateExtension"]["extension"];
+    assert_eq!(ext["isInstalled"], false);
+}
