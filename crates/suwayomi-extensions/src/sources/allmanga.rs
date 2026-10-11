@@ -468,6 +468,7 @@ impl MangaSource for AllMangaSource {
                             last_page_read: 0,
                             date_fetch: 0,
                             source_order: index as i64,
+                            page_count: -1,
                         });
                     }
                     return Ok(chapters);
@@ -524,6 +525,7 @@ impl MangaSource for AllMangaSource {
                                 last_page_read: 0,
                                 date_fetch: 0,
                                 source_order: index as i64,
+                                page_count: -1,
                             });
                         }
                     }
@@ -906,6 +908,7 @@ mod tests {
             last_page_read: 0,
             date_fetch: 0,
             source_order: 0,
+            page_count: -1,
         };
 
         let result = source.get_page_list(&chapter).await;

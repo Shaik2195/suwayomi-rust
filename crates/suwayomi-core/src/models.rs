@@ -27,6 +27,10 @@ pub struct Manga {
     pub initialized: bool,
 }
 
+fn default_page_count() -> i64 {
+    -1
+}
+
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct Chapter {
     pub id: i64,
@@ -41,6 +45,8 @@ pub struct Chapter {
     pub last_page_read: i64,
     pub date_fetch: i64,
     pub source_order: i64,
+    #[serde(default = "default_page_count")]
+    pub page_count: i64,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
@@ -189,6 +195,7 @@ mod tests {
             last_page_read: 0,
             date_fetch: 1234567890,
             source_order: 1,
+            page_count: -1,
         };
 
         let serialized = serde_json::to_string(&chapter).unwrap();

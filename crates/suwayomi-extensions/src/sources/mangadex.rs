@@ -420,6 +420,7 @@ impl MangaSource for MangaDexSource {
                     last_page_read: 0,
                     date_fetch: 0,
                     source_order,
+                    page_count: -1,
                 });
                 source_order += 1;
             }
@@ -654,6 +655,7 @@ mod tests {
             last_page_read: 0,
             date_fetch: 0,
             source_order: 0,
+            page_count: -1,
         };
 
         let result = source.get_page_list(&chapter).await;

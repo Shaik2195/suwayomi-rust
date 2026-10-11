@@ -35,6 +35,7 @@ pub async fn run_migrations(pool: &SqlitePool) -> Result<()> {
             last_page_read INTEGER NOT NULL,
             date_fetch INTEGER NOT NULL,
             source_order INTEGER NOT NULL,
+            page_count INTEGER NOT NULL DEFAULT -1,
             FOREIGN KEY(manga_id) REFERENCES manga(id) ON DELETE CASCADE
         );
         CREATE INDEX IF NOT EXISTS idx_chapter_manga_id ON chapter(manga_id);
@@ -125,6 +126,16 @@ pub async fn run_migrations(pool: &SqlitePool) -> Result<()> {
     )
     .await
     .map_err(|e| SuwayomiError::Database(e.to_string()))?;
+
+    // Migrate existing tables: add page_count to chapter if not present
+    let _ = sqlx::query("ALTER TABLE chapter ADD COLUMN page_count INTEGER NOT NULL DEFAULT -1")
+        .execute(pool)
+        .await;
+
+    // Ensure default category (id 1, 'Default') exists for category assignment
+    let _ = sqlx::query("INSERT OR IGNORE INTO category (id, name, `order`, flags) VALUES (1, 'Default', 0, 0)")
+        .execute(pool)
+        .await;
 
     Ok(())
 }

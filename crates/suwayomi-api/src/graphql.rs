@@ -271,18 +271,6 @@ pub struct CategoryNodeList {
     pub total_count: i32,
 }
 
-#[derive(SimpleObject, Clone)]
-#[graphql(name = "TrackerType")]
-pub struct TrackerType {
-    pub id: i32,
-    pub name: String,
-    pub text: String,
-    #[graphql(name = "isLoggedIn")]
-    pub is_logged_in: bool,
-    #[graphql(name = "authUrl")]
-    pub auth_url: Option<String>,
-}
-
 // --- Manga ---
 
 #[derive(Enum, Copy, Clone, Eq, PartialEq)]
@@ -447,6 +435,47 @@ pub struct TrackRecordNodeList {
 }
 
 #[derive(SimpleObject, Clone)]
+#[graphql(name = "TrackStatusType")]
+pub struct TrackStatusType {
+    pub name: String,
+    pub value: i32,
+}
+
+#[derive(SimpleObject, Clone)]
+#[graphql(name = "TrackerType")]
+pub struct TrackerType {
+    pub id: i32,
+    pub name: String,
+    pub icon: String,
+    #[graphql(name = "isLoggedIn")]
+    pub is_logged_in: bool,
+    #[graphql(name = "isTokenExpired")]
+    pub is_token_expired: bool,
+    #[graphql(name = "authUrl")]
+    pub auth_url: Option<String>,
+    #[graphql(name = "supportsPrivateTracking")]
+    pub supports_private_tracking: bool,
+    #[graphql(name = "supportsReadingDates")]
+    pub supports_reading_dates: bool,
+    #[graphql(name = "supportsTrackDeletion")]
+    pub supports_track_deletion: bool,
+    pub scores: Vec<String>,
+    pub statuses: Vec<TrackStatusType>,
+    #[graphql(name = "trackRecords")]
+    pub track_records: TrackRecordNodeList,
+}
+
+#[derive(SimpleObject, Clone, Default)]
+#[graphql(name = "TrackerNodeList")]
+pub struct TrackerNodeList {
+    pub nodes: Vec<TrackerType>,
+    #[graphql(name = "pageInfo")]
+    pub page_info: PageInfo,
+    #[graphql(name = "totalCount")]
+    pub total_count: i32,
+}
+
+#[derive(SimpleObject, Clone)]
 #[graphql(name = "MangaType")]
 pub struct MangaType {
     pub id: i64,
@@ -575,9 +604,166 @@ impl MangaType {
             categories: CategoryNodeList::default(),
             track_records: TrackRecordNodeList::default(),
             meta: vec![],
-            source: None,
+            source: get_default_source_type(manga.source_id),
         }
     }
+}
+
+fn get_default_source_type(source_id: i64) -> Option<SourceType> {
+    if source_id == 2499283573021221994 {
+        Some(SourceType {
+            id: source_id.into(),
+            name: "MangaDex".to_string(),
+            display_name: "MangaDex (all)".to_string(),
+            lang: "all".to_string(),
+            icon_url: "/api/v1/extension/icon/eu.kanade.tachiyomi.extension.all.mangadex".to_string(),
+            content_warning: ContentWarning::Safe,
+            is_configurable: false,
+            is_nsfw: false,
+            supports_latest: true,
+            base_url: Some("https://mangadex.org".to_string()),
+            home_url: Some("https://mangadex.org".to_string()),
+            extension: None,
+            meta: vec![],
+        })
+    } else if source_id == 8861274191478178487 {
+        Some(SourceType {
+            id: source_id.into(),
+            name: "AllAnime".to_string(),
+            display_name: "AllAnime (en)".to_string(),
+            lang: "en".to_string(),
+            icon_url: "/api/v1/extension/icon/eu.kanade.tachiyomi.extension.en.allanime".to_string(),
+            content_warning: ContentWarning::Safe,
+            is_configurable: false,
+            is_nsfw: false,
+            supports_latest: true,
+            base_url: Some("https://allmanga.to".to_string()),
+            home_url: Some("https://allmanga.to".to_string()),
+            extension: None,
+            meta: vec![],
+        })
+    } else {
+        Some(SourceType {
+            id: source_id.into(),
+            name: format!("Source {}", source_id),
+            display_name: format!("Source {}", source_id),
+            lang: "en".to_string(),
+            icon_url: "".to_string(),
+            content_warning: ContentWarning::Safe,
+            is_configurable: false,
+            is_nsfw: false,
+            supports_latest: true,
+            base_url: None,
+            home_url: None,
+            extension: None,
+            meta: vec![],
+        })
+    }
+}
+
+fn get_mock_trackers() -> Vec<TrackerType> {
+    vec![
+        TrackerType {
+            id: 1,
+            name: "ANILIST".to_string(),
+            icon: "".to_string(),
+            is_logged_in: false,
+            is_token_expired: false,
+            auth_url: Some("https://anilist.co/api/v2/oauth/authorize".to_string()),
+            supports_private_tracking: true,
+            supports_reading_dates: true,
+            supports_track_deletion: true,
+            scores: vec!["POINT_100".to_string(), "POINT_10".to_string()],
+            statuses: vec![
+                TrackStatusType { name: "Reading".to_string(), value: 1 },
+                TrackStatusType { name: "Completed".to_string(), value: 2 },
+                TrackStatusType { name: "On Hold".to_string(), value: 3 },
+                TrackStatusType { name: "Dropped".to_string(), value: 4 },
+                TrackStatusType { name: "Plan to Read".to_string(), value: 5 },
+            ],
+            track_records: TrackRecordNodeList::default(),
+        },
+        TrackerType {
+            id: 2,
+            name: "MYANIMELIST".to_string(),
+            icon: "".to_string(),
+            is_logged_in: false,
+            is_token_expired: false,
+            auth_url: Some("https://myanimelist.net/v1/oauth2/authorize".to_string()),
+            supports_private_tracking: false,
+            supports_reading_dates: true,
+            supports_track_deletion: false,
+            scores: vec!["POINT_10".to_string()],
+            statuses: vec![
+                TrackStatusType { name: "Reading".to_string(), value: 1 },
+                TrackStatusType { name: "Completed".to_string(), value: 2 },
+                TrackStatusType { name: "On Hold".to_string(), value: 3 },
+                TrackStatusType { name: "Dropped".to_string(), value: 4 },
+                TrackStatusType { name: "Plan to Read".to_string(), value: 5 },
+            ],
+            track_records: TrackRecordNodeList::default(),
+        },
+        TrackerType {
+            id: 3,
+            name: "KITSU".to_string(),
+            icon: "".to_string(),
+            is_logged_in: false,
+            is_token_expired: false,
+            auth_url: Some("https://kitsu.app/api/oauth/authorize".to_string()),
+            supports_private_tracking: false,
+            supports_reading_dates: true,
+            supports_track_deletion: false,
+            scores: vec!["POINT_20".to_string()],
+            statuses: vec![
+                TrackStatusType { name: "Reading".to_string(), value: 1 },
+                TrackStatusType { name: "Completed".to_string(), value: 2 },
+                TrackStatusType { name: "On Hold".to_string(), value: 3 },
+                TrackStatusType { name: "Dropped".to_string(), value: 4 },
+                TrackStatusType { name: "Plan to Read".to_string(), value: 5 },
+            ],
+            track_records: TrackRecordNodeList::default(),
+        },
+        TrackerType {
+            id: 4,
+            name: "SHIKIMORI".to_string(),
+            icon: "".to_string(),
+            is_logged_in: false,
+            is_token_expired: false,
+            auth_url: Some("https://shikimori.one/oauth/authorize".to_string()),
+            supports_private_tracking: false,
+            supports_reading_dates: true,
+            supports_track_deletion: false,
+            scores: vec!["POINT_10".to_string()],
+            statuses: vec![
+                TrackStatusType { name: "Reading".to_string(), value: 1 },
+                TrackStatusType { name: "Completed".to_string(), value: 2 },
+                TrackStatusType { name: "On Hold".to_string(), value: 3 },
+                TrackStatusType { name: "Dropped".to_string(), value: 4 },
+                TrackStatusType { name: "Plan to Read".to_string(), value: 5 },
+            ],
+            track_records: TrackRecordNodeList::default(),
+        },
+        TrackerType {
+            id: 5,
+            name: "BANGUMI".to_string(),
+            icon: "".to_string(),
+            is_logged_in: false,
+            is_token_expired: false,
+            auth_url: Some("https://bgm.tv/oauth/authorize".to_string()),
+            supports_private_tracking: false,
+            supports_reading_dates: true,
+            supports_track_deletion: false,
+            scores: vec!["POINT_10".to_string()],
+            statuses: vec![
+                TrackStatusType { name: "Reading".to_string(), value: 1 },
+                TrackStatusType { name: "Completed".to_string(), value: 2 },
+                TrackStatusType { name: "On Hold".to_string(), value: 3 },
+                TrackStatusType { name: "Dropped".to_string(), value: 4 },
+                TrackStatusType { name: "Plan to Read".to_string(), value: 5 },
+            ],
+            track_records: TrackRecordNodeList::default(),
+        },
+    ]
 }
 
 #[derive(SimpleObject, Clone, Default)]
@@ -726,7 +912,7 @@ impl From<models::Chapter> for ChapterType {
             last_read_at: "0".into(),
             fetched_at: chapter.date_fetch.into(),
             source_order: chapter.source_order,
-            page_count: 0,
+            page_count: chapter.page_count as i32,
             is_downloaded: false,
             real_url: Some(chapter.url),
             manga: None,
@@ -1643,86 +1829,19 @@ impl QueryRoot {
     }
 
     #[graphql(name = "trackers")]
-    async fn trackers(&self) -> async_graphql::Result<Vec<TrackerType>> {
-        Ok(vec![
-            TrackerType {
-                id: 1,
-                name: "ANILIST".to_string(),
-                text: "AniList".to_string(),
-                is_logged_in: false,
-                auth_url: Some("https://anilist.co/api/v2/oauth/authorize".to_string()),
-            },
-            TrackerType {
-                id: 2,
-                name: "MYANIMELIST".to_string(),
-                text: "MyAnimeList".to_string(),
-                is_logged_in: false,
-                auth_url: Some("https://myanimelist.net/v1/oauth2/authorize".to_string()),
-            },
-            TrackerType {
-                id: 3,
-                name: "KITSU".to_string(),
-                text: "Kitsu".to_string(),
-                is_logged_in: false,
-                auth_url: Some("https://kitsu.app/api/oauth/authorize".to_string()),
-            },
-            TrackerType {
-                id: 4,
-                name: "SHIKIMORI".to_string(),
-                text: "Shikimori".to_string(),
-                is_logged_in: false,
-                auth_url: Some("https://shikimori.one/oauth/authorize".to_string()),
-            },
-            TrackerType {
-                id: 5,
-                name: "BANGUMI".to_string(),
-                text: "Bangumi".to_string(),
-                is_logged_in: false,
-                auth_url: Some("https://bgm.tv/oauth/authorize".to_string()),
-            },
-        ])
+    async fn trackers(&self) -> async_graphql::Result<TrackerNodeList> {
+        let nodes = get_mock_trackers();
+        let total_count = nodes.len() as i32;
+        Ok(TrackerNodeList {
+            nodes,
+            page_info: PageInfo::default(),
+            total_count,
+        })
     }
 
     #[graphql(name = "tracker")]
     async fn tracker(&self, id: i32) -> async_graphql::Result<Option<TrackerType>> {
-        let trackers = vec![
-            TrackerType {
-                id: 1,
-                name: "ANILIST".to_string(),
-                text: "AniList".to_string(),
-                is_logged_in: false,
-                auth_url: Some("https://anilist.co/api/v2/oauth/authorize".to_string()),
-            },
-            TrackerType {
-                id: 2,
-                name: "MYANIMELIST".to_string(),
-                text: "MyAnimeList".to_string(),
-                is_logged_in: false,
-                auth_url: Some("https://myanimelist.net/v1/oauth2/authorize".to_string()),
-            },
-            TrackerType {
-                id: 3,
-                name: "KITSU".to_string(),
-                text: "Kitsu".to_string(),
-                is_logged_in: false,
-                auth_url: Some("https://kitsu.app/api/oauth/authorize".to_string()),
-            },
-            TrackerType {
-                id: 4,
-                name: "SHIKIMORI".to_string(),
-                text: "Shikimori".to_string(),
-                is_logged_in: false,
-                auth_url: Some("https://shikimori.one/oauth/authorize".to_string()),
-            },
-            TrackerType {
-                id: 5,
-                name: "BANGUMI".to_string(),
-                text: "Bangumi".to_string(),
-                is_logged_in: false,
-                auth_url: Some("https://bgm.tv/oauth/authorize".to_string()),
-            },
-        ];
-        Ok(trackers.into_iter().find(|t| t.id == id))
+        Ok(get_mock_trackers().into_iter().find(|t| t.id == id))
     }
 
     #[graphql(name = "categories")]
@@ -2820,6 +2939,50 @@ pub struct UpdateChaptersPayload {
 }
 
 #[derive(InputObject, Default, Clone)]
+pub struct DeleteDownloadedChaptersInput {
+    #[graphql(name = "clientMutationId")]
+    pub client_mutation_id: Option<String>,
+    pub ids: Vec<i64>,
+}
+
+#[derive(SimpleObject, Clone)]
+pub struct DeleteDownloadedChaptersPayload {
+    pub chapters: Option<Vec<ChapterType>>,
+    #[graphql(name = "clientMutationId")]
+    pub client_mutation_id: Option<String>,
+}
+
+#[derive(InputObject, Default, Clone)]
+pub struct DeleteDownloadedChapterInput {
+    #[graphql(name = "clientMutationId")]
+    pub client_mutation_id: Option<String>,
+    pub id: i64,
+}
+
+#[derive(SimpleObject, Clone)]
+pub struct DeleteDownloadedChapterPayload {
+    pub chapters: Option<ChapterType>,
+    #[graphql(name = "clientMutationId")]
+    pub client_mutation_id: Option<String>,
+}
+
+#[derive(InputObject, Default, Clone)]
+pub struct TrackProgressInput {
+    #[graphql(name = "clientMutationId")]
+    pub client_mutation_id: Option<String>,
+    #[graphql(name = "mangaId")]
+    pub manga_id: i64,
+}
+
+#[derive(SimpleObject, Clone)]
+pub struct TrackProgressPayload {
+    #[graphql(name = "trackRecords")]
+    pub track_records: Option<Vec<TrackRecordType>>,
+    #[graphql(name = "clientMutationId")]
+    pub client_mutation_id: Option<String>,
+}
+
+#[derive(InputObject, Default, Clone)]
 pub struct CreateCategoryInput {
     #[graphql(name = "clientMutationId")]
     pub client_mutation_id: Option<String>,
@@ -3139,8 +3302,12 @@ impl MutationRoot {
                     }
                 }
             }
+            let page_count = page_list.len() as i32;
+            let _ = chapter_repo.update_page_count(c.id, page_count as i64).await;
+            let mut chapter_type: ChapterType = c.into();
+            chapter_type.page_count = page_count;
             Ok(FetchChapterPagesPayload {
-                chapter: Some(c.into()),
+                chapter: Some(chapter_type),
                 pages: Some(page_list),
                 client_mutation_id: input.client_mutation_id,
             })
@@ -3352,22 +3519,92 @@ impl MutationRoot {
     ) -> async_graphql::Result<UpdateChaptersPayload> {
         let pool = ctx.data::<SqlitePool>()?;
         let repo = ChapterRepository::new(pool);
+        let manga_repo = MangaRepository::new(pool);
 
         let mut updated = Vec::new();
         if let Some(patch) = input.patch {
-            if let Some(read) = patch.is_read {
-                let last_page = patch.last_page_read.unwrap_or(0);
-                for id in &input.ids {
+            let last_page = patch.last_page_read.unwrap_or(0);
+            for id in &input.ids {
+                if let Some(read) = patch.is_read {
                     let _ = repo.update_read(*id, read, last_page).await;
-                    if let Ok(Some(c)) = repo.get_by_id(*id).await {
-                        updated.push(c.into());
+                }
+                if let Ok(Some(c)) = repo.get_by_id(*id).await {
+                    let mut chapter_type: ChapterType = c.into();
+                    if let Ok(Some(m)) = manga_repo.get_by_id(chapter_type.manga_id).await {
+                        let chapters = repo.get_by_manga_id(m.id).await.unwrap_or_default();
+                        chapter_type.manga = Some(Box::new(MangaType::from_model(m, chapters)));
                     }
+                    updated.push(chapter_type);
                 }
             }
         }
         Ok(UpdateChaptersPayload {
             chapters: Some(updated),
             client_mutation_id: input.client_mutation_id,
+        })
+    }
+
+    #[graphql(name = "deleteDownloadedChapters")]
+    async fn delete_downloaded_chapters_mutation(
+        &self,
+        ctx: &Context<'_>,
+        input: DeleteDownloadedChaptersInput,
+    ) -> async_graphql::Result<DeleteDownloadedChaptersPayload> {
+        let pool = ctx.data::<SqlitePool>()?;
+        let repo = ChapterRepository::new(pool);
+        let manga_repo = MangaRepository::new(pool);
+        let mut updated = Vec::new();
+        for id in &input.ids {
+            if let Ok(Some(c)) = repo.get_by_id(*id).await {
+                let mut chapter_type: ChapterType = c.into();
+                chapter_type.is_downloaded = false;
+                if let Ok(Some(m)) = manga_repo.get_by_id(chapter_type.manga_id).await {
+                    let chapters = repo.get_by_manga_id(m.id).await.unwrap_or_default();
+                    chapter_type.manga = Some(Box::new(MangaType::from_model(m, chapters)));
+                }
+                updated.push(chapter_type);
+            }
+        }
+        Ok(DeleteDownloadedChaptersPayload {
+            client_mutation_id: input.client_mutation_id,
+            chapters: Some(updated),
+        })
+    }
+
+    #[graphql(name = "deleteDownloadedChapter")]
+    async fn delete_downloaded_chapter_mutation(
+        &self,
+        ctx: &Context<'_>,
+        input: DeleteDownloadedChapterInput,
+    ) -> async_graphql::Result<DeleteDownloadedChapterPayload> {
+        let pool = ctx.data::<SqlitePool>()?;
+        let repo = ChapterRepository::new(pool);
+        let manga_repo = MangaRepository::new(pool);
+        let mut chapter_type = None;
+        if let Ok(Some(c)) = repo.get_by_id(input.id).await {
+            let mut ct: ChapterType = c.into();
+            ct.is_downloaded = false;
+            if let Ok(Some(m)) = manga_repo.get_by_id(ct.manga_id).await {
+                let chapters = repo.get_by_manga_id(m.id).await.unwrap_or_default();
+                ct.manga = Some(Box::new(MangaType::from_model(m, chapters)));
+            }
+            chapter_type = Some(ct);
+        }
+        Ok(DeleteDownloadedChapterPayload {
+            client_mutation_id: input.client_mutation_id,
+            chapters: chapter_type,
+        })
+    }
+
+    #[graphql(name = "trackProgress")]
+    async fn track_progress_mutation(
+        &self,
+        _ctx: &Context<'_>,
+        input: TrackProgressInput,
+    ) -> async_graphql::Result<TrackProgressPayload> {
+        Ok(TrackProgressPayload {
+            client_mutation_id: input.client_mutation_id,
+            track_records: Some(vec![]),
         })
     }
 

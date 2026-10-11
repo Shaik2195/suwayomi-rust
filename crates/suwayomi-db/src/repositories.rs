@@ -484,8 +484,8 @@ impl<'a> ChapterRepository<'a> {
         for chapter in chapters {
             sqlx::query(
                 r#"
-                INSERT INTO chapter (manga_id, url, name, date_upload, chapter_number, scanlator, read, bookmark, last_page_read, date_fetch, source_order)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                INSERT INTO chapter (manga_id, url, name, date_upload, chapter_number, scanlator, read, bookmark, last_page_read, date_fetch, source_order, page_count)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 "#
             )
             .bind(chapter.manga_id)
@@ -499,6 +499,7 @@ impl<'a> ChapterRepository<'a> {
             .bind(chapter.last_page_read)
             .bind(chapter.date_fetch)
             .bind(chapter.source_order)
+            .bind(chapter.page_count)
             .execute(&mut *tx)
             .await
             .map_err(|e| SuwayomiError::Database(e.to_string()))?;
@@ -555,6 +556,16 @@ impl<'a> ChapterRepository<'a> {
         Ok(())
     }
 
+    pub async fn update_page_count(&self, id: i64, page_count: i64) -> Result<()> {
+        sqlx::query("UPDATE chapter SET page_count = ? WHERE id = ?")
+            .bind(page_count)
+            .bind(id)
+            .execute(self.pool)
+            .await
+            .map_err(|e| SuwayomiError::Database(e.to_string()))?;
+        Ok(())
+    }
+
     fn map_row_to_chapter(&self, row: &sqlx::sqlite::SqliteRow) -> Chapter {
         Chapter {
             id: row.get("id"),
@@ -569,6 +580,7 @@ impl<'a> ChapterRepository<'a> {
             last_page_read: row.get("last_page_read"),
             date_fetch: row.get("date_fetch"),
             source_order: row.get("source_order"),
+            page_count: row.try_get("page_count").unwrap_or(-1),
         }
     }
 }

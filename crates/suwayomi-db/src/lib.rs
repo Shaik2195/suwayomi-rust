@@ -69,6 +69,7 @@ mod tests {
             last_page_read: 0,
             date_fetch: 1234567890,
             source_order: 1,
+            page_count: -1,
         };
 
         chapter_repo

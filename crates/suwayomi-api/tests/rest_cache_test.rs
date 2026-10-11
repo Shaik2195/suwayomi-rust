@@ -143,6 +143,7 @@ async fn test_get_chapter_page_proxy() {
         last_page_read: 0,
         date_fetch: 0,
         source_order: 1,
+        page_count: -1,
     };
     chapter_repo.insert_chapters(&[chapter]).await.unwrap();
 
