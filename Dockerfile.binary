@@ -1,0 +1,19 @@
+FROM debian:bookworm-slim
+
+RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates libsqlite3-0 libssl3 && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+COPY bin/suwayomi-server /usr/local/bin/suwayomi-server
+COPY config ./config
+COPY migrations ./migrations
+COPY webui ./webui
+
+EXPOSE 4567
+VOLUME /data
+
+ENV SUWAYOMI_DATA_DIR=/data
+ENV CONFIG_FILE=/app/config/default.toml
+ENV WEBUI_DIR=/app/webui
+
+CMD ["suwayomi-server"]

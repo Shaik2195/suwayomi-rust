@@ -1824,6 +1824,7 @@ impl QueryRoot {
     #[graphql(name = "metas")]
     async fn metas(
         &self,
+        ctx: &Context<'_>,
         _condition: Option<MetaConditionInput>,
         _filter: Option<MetaFilterInput>,
         _order: Option<Vec<MetaOrderInput>>,
@@ -1833,10 +1834,18 @@ impl QueryRoot {
         _last: Option<i32>,
         _offset: Option<i32>,
     ) -> async_graphql::Result<GlobalMetaNodeList> {
+        let pool = ctx.data::<SqlitePool>()?;
+        let repo = suwayomi_db::repositories::ServerSettingsRepository::new(pool);
+        let settings = repo.get_all().await.unwrap_or_default();
+        let nodes: Vec<GlobalMetaType> = settings
+            .into_iter()
+            .map(|(key, value)| GlobalMetaType { key, value })
+            .collect();
+        let total_count = nodes.len() as i32;
         Ok(GlobalMetaNodeList {
-            nodes: vec![],
+            nodes,
             page_info: PageInfo::default(),
-            total_count: 0,
+            total_count,
         })
     }
 
@@ -2158,7 +2167,7 @@ pub struct FetchChapterPagesInput {
 #[derive(SimpleObject, Clone)]
 pub struct FetchChapterPagesPayload {
     pub chapter: Option<ChapterType>,
-    pub pages: Option<Vec<Page>>,
+    pub pages: Option<Vec<String>>,
     #[graphql(name = "clientMutationId")]
     pub client_mutation_id: Option<String>,
 }
@@ -2439,6 +2448,35 @@ pub struct DeleteMangaMetasPayload {
     pub metas: Option<Vec<MangaMetaType>>,
 }
 
+#[derive(InputObject, Default, Clone)]
+pub struct SetGlobalMetasInput {
+    #[graphql(name = "clientMutationId")]
+    pub client_mutation_id: Option<String>,
+    pub metas: Vec<MetaInput>,
+}
+
+#[derive(SimpleObject, Default, Clone)]
+pub struct SetGlobalMetasPayload {
+    #[graphql(name = "clientMutationId")]
+    pub client_mutation_id: Option<String>,
+    pub metas: Option<Vec<GlobalMetaType>>,
+}
+
+#[derive(InputObject, Default, Clone)]
+pub struct DeleteGlobalMetasInput {
+    #[graphql(name = "clientMutationId")]
+    pub client_mutation_id: Option<String>,
+    pub keys: Option<Vec<String>>,
+    pub prefixes: Option<Vec<String>>,
+}
+
+#[derive(SimpleObject, Default, Clone)]
+pub struct DeleteGlobalMetasPayload {
+    #[graphql(name = "clientMutationId")]
+    pub client_mutation_id: Option<String>,
+    pub metas: Option<Vec<GlobalMetaType>>,
+}
+
 #[derive(SimpleObject, Clone)]
 pub struct FetchExtensionsPayload {
     #[graphql(name = "clientMutationId")]
@@ -2519,10 +2557,11 @@ impl MutationRoot {
                     if let Ok(pages) = source.get_page_list(&c).await {
                         page_list = pages
                             .into_iter()
-                            .map(|p| Page {
-                                index: p.index,
-                                url: p.url,
-                                image_url: p.image_url,
+                            .map(|p| {
+                                format!(
+                                    "/api/v1/manga/{}/chapter/{}/page/{}",
+                                    c.manga_id, c.id, p.index
+                                )
                             })
                             .collect();
                     }
@@ -2805,12 +2844,16 @@ impl MutationRoot {
     #[graphql(name = "setMangaMetas")]
     async fn set_manga_metas(
         &self,
+        ctx: &Context<'_>,
         input: SetMangaMetasInput,
     ) -> async_graphql::Result<SetMangaMetasPayload> {
+        let pool = ctx.data::<SqlitePool>()?;
+        let repo = suwayomi_db::repositories::MangaMetaRepository::new(pool);
         let mut metas = Vec::new();
         for item in &input.items {
             for manga_id in &item.manga_ids {
                 for meta in &item.metas {
+                    let _ = repo.upsert(*manga_id, &meta.key, &meta.value).await;
                     metas.push(MangaMetaType {
                         manga_id: *manga_id,
                         key: meta.key.clone(),
@@ -2828,9 +2871,54 @@ impl MutationRoot {
     #[graphql(name = "deleteMangaMetas")]
     async fn delete_manga_metas(
         &self,
+        ctx: &Context<'_>,
         input: DeleteMangaMetasInput,
     ) -> async_graphql::Result<DeleteMangaMetasPayload> {
+        let pool = ctx.data::<SqlitePool>()?;
+        let repo = suwayomi_db::repositories::MangaMetaRepository::new(pool);
+        for item in &input.items {
+            for manga_id in &item.manga_ids {
+                if let Some(keys) = &item.keys {
+                    for key in keys {
+                        let _ = repo.delete(*manga_id, key).await;
+                    }
+                }
+            }
+        }
         Ok(DeleteMangaMetasPayload {
+            client_mutation_id: input.client_mutation_id,
+            metas: Some(vec![]),
+        })
+    }
+
+    #[graphql(name = "setGlobalMetas")]
+    async fn set_global_metas(
+        &self,
+        ctx: &Context<'_>,
+        input: SetGlobalMetasInput,
+    ) -> async_graphql::Result<SetGlobalMetasPayload> {
+        let pool = ctx.data::<SqlitePool>()?;
+        let repo = suwayomi_db::repositories::ServerSettingsRepository::new(pool);
+        let mut metas = Vec::new();
+        for meta in &input.metas {
+            let _ = repo.upsert(&meta.key, &meta.value).await;
+            metas.push(GlobalMetaType {
+                key: meta.key.clone(),
+                value: meta.value.clone(),
+            });
+        }
+        Ok(SetGlobalMetasPayload {
+            client_mutation_id: input.client_mutation_id,
+            metas: Some(metas),
+        })
+    }
+
+    #[graphql(name = "deleteGlobalMetas")]
+    async fn delete_global_metas(
+        &self,
+        input: DeleteGlobalMetasInput,
+    ) -> async_graphql::Result<DeleteGlobalMetasPayload> {
+        Ok(DeleteGlobalMetasPayload {
             client_mutation_id: input.client_mutation_id,
             metas: Some(vec![]),
         })

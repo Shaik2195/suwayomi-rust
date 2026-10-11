@@ -358,15 +358,44 @@ fn parse_protobuf(bytes: &[u8]) -> Option<Vec<ExtensionListing>> {
 }
 
 impl ExtensionRegistry {
-    pub fn new(repos: Vec<ExtensionRepo>) -> Self {
+    pub fn new(mut repos: Vec<ExtensionRepo>) -> Self {
+        if repos.is_empty() {
+            repos.push(ExtensionRepo {
+                name: "Keiyoushi".to_string(),
+                url: "https://raw.githubusercontent.com/keiyoushi/extensions/repo/index.min.json"
+                    .to_string(),
+            });
+        }
         Self::with_dir(repos, PathBuf::from("./data/extensions"))
     }
 
     pub fn with_dir(repos: Vec<ExtensionRepo>, dir: PathBuf) -> Self {
-        // TODO: Optionally scan `dir` to populate `installed` on startup
+        let default_installed = vec![
+            ExtensionListing {
+                pkg_name: crate::sources::allmanga::AllMangaSource::PKG_NAME.to_string(),
+                name: "AllAnime".to_string(),
+                version_name: "1.0.0".to_string(),
+                version_code: 1,
+                lang: "en".to_string(),
+                is_nsfw: false,
+                apk_url: "".to_string(),
+                icon_url: "".to_string(),
+            },
+            ExtensionListing {
+                pkg_name: crate::sources::mangadex::MangaDexSource::PKG_NAME.to_string(),
+                name: "MangaDex".to_string(),
+                version_name: "1.0.0".to_string(),
+                version_code: 1,
+                lang: "all".to_string(),
+                is_nsfw: false,
+                apk_url: "".to_string(),
+                icon_url: "".to_string(),
+            },
+        ];
+
         Self {
             repos,
-            installed: Arc::new(RwLock::new(Vec::new())),
+            installed: Arc::new(RwLock::new(default_installed)),
             extensions_dir: dir,
         }
     }
