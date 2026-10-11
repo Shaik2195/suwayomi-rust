@@ -9,3 +9,8 @@ node_modules
 data
 playwright-report
 test-results
+
+bin/
+*.tar.gz
+*.zip
+casaos_schema.json
