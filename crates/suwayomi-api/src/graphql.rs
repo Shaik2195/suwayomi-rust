@@ -1743,7 +1743,10 @@ impl QueryRoot {
             badge_label: "Official".to_string(),
             contact_discord: Some("https://discord.gg/keiyoushi".to_string()),
             contact_website: "https://keiyoushi.github.io".to_string(),
-            extension_list_url: Some("https://raw.githubusercontent.com/keiyoushi/extensions/repo/index.min.json".to_string()),
+            extension_list_url: Some(
+                "https://raw.githubusercontent.com/keiyoushi/extensions/repo/index.min.json"
+                    .to_string(),
+            ),
             index_url,
             is_legacy: false,
             name: "Keiyoushi".to_string(),
@@ -1768,8 +1771,12 @@ impl QueryRoot {
             badge_label: "Official".to_string(),
             contact_discord: Some("https://discord.gg/keiyoushi".to_string()),
             contact_website: "https://keiyoushi.github.io".to_string(),
-            extension_list_url: Some("https://raw.githubusercontent.com/keiyoushi/extensions/repo/index.min.json".to_string()),
-            index_url: "https://raw.githubusercontent.com/keiyoushi/extensions/repo/index.min.json".to_string(),
+            extension_list_url: Some(
+                "https://raw.githubusercontent.com/keiyoushi/extensions/repo/index.min.json"
+                    .to_string(),
+            ),
+            index_url: "https://raw.githubusercontent.com/keiyoushi/extensions/repo/index.min.json"
+                .to_string(),
             is_legacy: false,
             name: "Keiyoushi".to_string(),
             signing_key: "".to_string(),
@@ -2745,8 +2752,12 @@ impl MutationRoot {
             badge_label: "Official".to_string(),
             contact_discord: Some("https://discord.gg/keiyoushi".to_string()),
             contact_website: "https://keiyoushi.github.io".to_string(),
-            extension_list_url: Some("https://raw.githubusercontent.com/keiyoushi/extensions/repo/index.min.json".to_string()),
-            index_url: "https://raw.githubusercontent.com/keiyoushi/extensions/repo/index.min.json".to_string(),
+            extension_list_url: Some(
+                "https://raw.githubusercontent.com/keiyoushi/extensions/repo/index.min.json"
+                    .to_string(),
+            ),
+            index_url: "https://raw.githubusercontent.com/keiyoushi/extensions/repo/index.min.json"
+                .to_string(),
             is_legacy: false,
             name: "Keiyoushi".to_string(),
             signing_key: "".to_string(),
@@ -2986,9 +2997,7 @@ pub async fn graphql_get_handler(
         if let (Ok(protocol), Ok(ws)) = (protocol_res, ws_res) {
             return ws
                 .protocols(["graphql-transport-ws", "graphql-ws"])
-                .on_upgrade(move |socket| {
-                    GraphQLWebSocket::new(socket, schema, protocol).serve()
-                })
+                .on_upgrade(move |socket| GraphQLWebSocket::new(socket, schema, protocol).serve())
                 .into_response();
         }
     }

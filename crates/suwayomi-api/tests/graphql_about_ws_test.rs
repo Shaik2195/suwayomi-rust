@@ -90,14 +90,20 @@ async fn test_graphql_about_parity() {
     assert_eq!(status, StatusCode::OK);
     let resp_json: serde_json::Value = serde_json::from_slice(&body_bytes).unwrap();
 
-    assert!(resp_json.get("errors").is_none(), "Errors: {:?}", resp_json.get("errors"));
+    assert!(
+        resp_json.get("errors").is_none(),
+        "Errors: {:?}",
+        resp_json.get("errors")
+    );
 
     let data = resp_json.get("data").expect("Missing data");
 
     let about_server = data.get("aboutServer").expect("Missing aboutServer");
     assert_eq!(about_server["name"], "Suwayomi-Rust");
 
-    let platform_info = about_server.get("platformInfo").expect("Missing platformInfo");
+    let platform_info = about_server
+        .get("platformInfo")
+        .expect("Missing platformInfo");
     assert_eq!(platform_info["arch"], std::env::consts::ARCH);
     assert_eq!(platform_info["headless"], false);
 
@@ -158,14 +164,22 @@ async fn test_graphql_websocket_upgrade() {
             .header("Host", addr.to_string())
             .header("Upgrade", "websocket")
             .header("Connection", "Upgrade")
-            .header("Sec-WebSocket-Key", tokio_tungstenite::tungstenite::handshake::client::generate_key())
+            .header(
+                "Sec-WebSocket-Key",
+                tokio_tungstenite::tungstenite::handshake::client::generate_key(),
+            )
             .header("Sec-WebSocket-Version", "13")
             .header("Sec-WebSocket-Protocol", "graphql-transport-ws")
             .body(())
             .unwrap();
 
         let (mut socket, response) = tokio_tungstenite::connect_async(req).await.unwrap();
-        assert_eq!(response.status(), StatusCode::SWITCHING_PROTOCOLS, "Failed for endpoint {}", endpoint);
+        assert_eq!(
+            response.status(),
+            StatusCode::SWITCHING_PROTOCOLS,
+            "Failed for endpoint {}",
+            endpoint
+        );
         let _ = socket.close(None).await;
     }
 }

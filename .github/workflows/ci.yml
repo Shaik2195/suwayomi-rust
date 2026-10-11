@@ -35,3 +35,9 @@ jobs:
     
     - name: Build
       run: cargo build --workspace --release
+
+    - name: Upload binary
+      uses: actions/upload-artifact@v4
+      with:
+        name: suwayomi-server
+        path: target/release/suwayomi-server
