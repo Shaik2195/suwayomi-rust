@@ -4,6 +4,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates
 
 WORKDIR /app
 
+RUN mkdir -p /home/suwayomi/.local/share && ln -s /data /home/suwayomi/.local/share/Tachidesk
+
 COPY bin/suwayomi-server /usr/local/bin/suwayomi-server
 COPY config ./config
 COPY migrations ./migrations

@@ -47,3 +47,9 @@ Suwayomi-Rust is a high-performance Rust rewrite of [Suwayomi-Server](https://gi
 6. **Playwright & Testing Rules**:
    - Browser automation strictly via official Playwright MCP server tools (`call_mcp_tool` / `mcp_playwright_*`), never direct CLI script automation.
    - Remote code changes dispatched via Google Jules sessions on repo `Shaik2195/suwayomi-rust`.
+
+7. **Source Browsing & Full WebUI Parity**:
+   - `fetchSourceManga` Relay mutation: full support for `POPULAR`, `LATEST`, and `SEARCH` browsing with `hasNextPage` pagination.
+   - Automatic database insertion and ID mapping via `MangaRepository` (preserving `in_library` / `initialized` status).
+   - Source metadata and configuration mutations (`setSourceMetas`, `deleteSourceMetas`, `setSourceMeta`, `deleteSourceMeta`, `updateSourcePreference`).
+   - CasaOS Deliverable: `suwayomi-rust-docker.zip` (containing `suwayomi-rust-docker.tar.gz`, `docker-compose.yml`, and `README.md`).
