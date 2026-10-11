@@ -49,9 +49,11 @@ async fn test_sources_graphql() {
     let query = r#"
     {
         sources {
-            id
-            name
-            lang
+            nodes {
+                id
+                name
+                lang
+            }
         }
     }
     "#;
@@ -75,7 +77,7 @@ async fn test_sources_graphql() {
 
     let data = resp_json.get("data").expect("Missing data");
     let sources = data.get("sources").expect("Missing sources");
-    assert!(sources.is_array());
+    assert!(sources.get("nodes").unwrap().is_array());
 
     // As we can't easily install a mock extension here without network mocks,
     // it will likely be empty.
@@ -83,9 +85,11 @@ async fn test_sources_graphql() {
     // Test fetchMangaAndChapters with an invalid source to check error handling
     let mutation = r#"
     mutation {
-        fetchMangaAndChapters(sourceId: "999", mangaUrl: "/test") {
-            id
-            title
+        fetchMangaAndChapters(input: { id: 999 }) {
+            manga {
+                id
+                title
+            }
         }
     }
     "#;

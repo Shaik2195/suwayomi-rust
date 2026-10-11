@@ -113,7 +113,7 @@ async fn test_graphql_about_parity() {
     let about_webui = data.get("aboutWebUI").expect("Missing aboutWebUI");
     assert_eq!(about_webui["channel"], "stable");
     assert_eq!(about_webui["tag"], "latest");
-    assert_eq!(about_webui["updateTimestamp"], "unknown");
+    assert_eq!(about_webui["updateTimestamp"], "1790737255000");
 }
 
 #[tokio::test]

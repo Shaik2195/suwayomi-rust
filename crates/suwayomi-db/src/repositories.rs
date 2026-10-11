@@ -253,6 +253,15 @@ impl<'a> ChapterRepository<'a> {
         }
     }
 
+    pub async fn get_all(&self) -> Result<Vec<Chapter>> {
+        let rows = sqlx::query("SELECT * FROM chapter ORDER BY date_fetch DESC, id DESC LIMIT 500")
+            .fetch_all(self.pool)
+            .await
+            .map_err(|e| SuwayomiError::Database(e.to_string()))?;
+
+        Ok(rows.iter().map(|r| self.map_row_to_chapter(r)).collect())
+    }
+
     pub async fn update_read(&self, id: i64, read: bool, last_page_read: i64) -> Result<()> {
         sqlx::query("UPDATE chapter SET read = ?, last_page_read = ? WHERE id = ?")
             .bind(read)
@@ -299,6 +308,20 @@ impl<'a> CategoryRepository<'a> {
             .map_err(|e| SuwayomiError::Database(e.to_string()))?;
 
         Ok(rows.iter().map(|r| self.map_row_to_category(r)).collect())
+    }
+
+    pub async fn get_by_id(&self, id: i64) -> Result<Option<Category>> {
+        let row = sqlx::query("SELECT * FROM category WHERE id = ?")
+            .bind(id)
+            .fetch_optional(self.pool)
+            .await
+            .map_err(|e| SuwayomiError::Database(e.to_string()))?;
+
+        if let Some(r) = row {
+            Ok(Some(self.map_row_to_category(&r)))
+        } else {
+            Ok(None)
+        }
     }
 
     pub async fn insert_category(&self, category: &Category) -> Result<i64> {
