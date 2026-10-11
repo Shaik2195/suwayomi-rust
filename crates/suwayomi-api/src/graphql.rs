@@ -3087,10 +3087,34 @@ impl MutationRoot {
             let _ = registry.install_extension(&pkg_name).await;
         }
 
-        let ext = QueryRoot.extension(ctx, pkg_name).await?;
+        let ext = QueryRoot.extension(ctx, pkg_name.clone()).await?;
+        let extension = ext.or_else(|| {
+            Some(ExtensionType {
+                pkg_name: pkg_name.clone(),
+                name: pkg_name,
+                lang: "".to_string(),
+                version_code_long: 0,
+                version_code: 0,
+                version_name: "".to_string(),
+                icon_url: "".to_string(),
+                apk_url: None,
+                apk_name: None,
+                jar_url: None,
+                repo: None,
+                store_index_url: None,
+                content_warning: ContentWarning::Safe,
+                is_installed: false,
+                is_nsfw: false,
+                is_obsolete: false,
+                has_update: false,
+                extension_lib: None,
+                extension_store: None,
+                source: SourceNodeList::default(),
+            })
+        });
         Ok(UpdateExtensionPayload {
             client_mutation_id: input.client_mutation_id,
-            extension: ext,
+            extension,
         })
     }
 
