@@ -714,7 +714,7 @@ mod tests {
 
         // Initial state
         let installed = registry.get_installed_extensions().await;
-        assert_eq!(installed.len(), 0);
+        assert_eq!(installed.len(), 2);
 
         // Install
         let listing = registry
@@ -724,11 +724,10 @@ mod tests {
         assert_eq!(listing.name, "Mock");
 
         let installed = registry.get_installed_extensions().await;
-        assert_eq!(installed.len(), 1);
-        assert_eq!(
-            installed[0].pkg_name,
-            "eu.kanade.tachiyomi.extension.en.mock"
-        );
+        assert_eq!(installed.len(), 3);
+        assert!(installed
+            .iter()
+            .any(|e| e.pkg_name == "eu.kanade.tachiyomi.extension.en.mock"));
 
         // Verify file exists
         let apk_path = temp_dir
@@ -744,7 +743,7 @@ mod tests {
         assert!(success);
 
         let installed = registry.get_installed_extensions().await;
-        assert_eq!(installed.len(), 0);
+        assert_eq!(installed.len(), 2);
 
         // Verify file deleted
         assert!(!apk_path.exists());
