@@ -72,7 +72,7 @@ impl async_graphql::ScalarType for Cursor {
 
 // --- Common Pagination & Enums ---
 
-#[derive(SimpleObject, Clone, Default)]
+#[derive(SimpleObject, Debug, Clone, Default)]
 #[graphql(name = "PageInfo")]
 pub struct PageInfo {
     #[graphql(name = "endCursor")]
@@ -685,7 +685,7 @@ pub type Chapter = ChapterType;
 
 // --- Sources & Extensions ---
 
-#[derive(Enum, Copy, Clone, Eq, PartialEq)]
+#[derive(Enum, Copy, Clone, Debug, Eq, PartialEq)]
 pub enum ContentWarning {
     #[graphql(name = "SAFE")]
     Safe,
@@ -711,7 +711,7 @@ pub struct SourceFilterInput {
     pub lang: Option<StringFilterInput>,
 }
 
-#[derive(SimpleObject, Clone)]
+#[derive(SimpleObject, Debug, Clone)]
 #[graphql(name = "SourceMetaType")]
 pub struct SourceMetaType {
     #[graphql(name = "sourceId")]
@@ -720,7 +720,7 @@ pub struct SourceMetaType {
     pub value: String,
 }
 
-#[derive(SimpleObject, Clone)]
+#[derive(SimpleObject, Debug, Clone)]
 #[graphql(name = "SourceType")]
 pub struct SourceType {
     pub id: LongString,
@@ -746,7 +746,7 @@ pub struct SourceType {
     pub meta: Vec<SourceMetaType>,
 }
 
-#[derive(SimpleObject, Clone, Default)]
+#[derive(SimpleObject, Debug, Clone, Default)]
 #[graphql(name = "SourceNodeList")]
 pub struct SourceNodeList {
     pub nodes: Vec<SourceType>,
@@ -798,7 +798,7 @@ pub struct ExtensionStoreOrderInput {
     pub by_type: Option<SortOrder>,
 }
 
-#[derive(SimpleObject, Clone)]
+#[derive(SimpleObject, Debug, Clone)]
 #[graphql(name = "ExtensionType")]
 pub struct ExtensionType {
     #[graphql(name = "pkgName")]
@@ -840,7 +840,7 @@ pub struct ExtensionType {
     pub source: SourceNodeList,
 }
 
-#[derive(SimpleObject, Clone, Default)]
+#[derive(SimpleObject, Debug, Clone, Default)]
 #[graphql(name = "ExtensionNodeList")]
 pub struct ExtensionNodeList {
     pub nodes: Vec<ExtensionType>,
@@ -850,7 +850,7 @@ pub struct ExtensionNodeList {
     pub total_count: i32,
 }
 
-#[derive(SimpleObject, Clone)]
+#[derive(SimpleObject, Debug, Clone)]
 #[graphql(name = "ExtensionStoreType")]
 pub struct ExtensionStoreType {
     #[graphql(name = "badgeLabel")]
@@ -871,7 +871,7 @@ pub struct ExtensionStoreType {
     pub extensions: ExtensionNodeList,
 }
 
-#[derive(SimpleObject, Clone, Default)]
+#[derive(SimpleObject, Debug, Clone, Default)]
 #[graphql(name = "ExtensionStoreNodeList")]
 pub struct ExtensionStoreNodeList {
     pub nodes: Vec<ExtensionStoreType>,
@@ -1705,6 +1705,22 @@ impl QueryRoot {
             .await
             .unwrap_or_default();
 
+        let keiyoushi_store = ExtensionStoreType {
+            badge_label: "Official".to_string(),
+            contact_discord: Some("https://discord.gg/keiyoushi".to_string()),
+            contact_website: "https://keiyoushi.github.io".to_string(),
+            extension_list_url: Some(
+                "https://raw.githubusercontent.com/keiyoushi/extensions/repo/index.min.json"
+                    .to_string(),
+            ),
+            index_url: "https://raw.githubusercontent.com/keiyoushi/extensions/repo/index.min.json"
+                .to_string(),
+            is_legacy: false,
+            name: "Keiyoushi".to_string(),
+            signing_key: "".to_string(),
+            extensions: ExtensionNodeList::default(),
+        };
+
         let mut nodes = Vec::new();
         let installed_pkgs: std::collections::HashSet<String> =
             installed.iter().map(|e| e.pkg_name.clone()).collect();
@@ -1736,7 +1752,7 @@ impl QueryRoot {
                 is_obsolete: false,
                 has_update: false,
                 extension_lib: None,
-                extension_store: None,
+                extension_store: Some(Box::new(keiyoushi_store.clone())),
                 source: SourceNodeList::default(),
             });
         }
@@ -1766,7 +1782,7 @@ impl QueryRoot {
                     is_obsolete: false,
                     has_update: false,
                     extension_lib: None,
-                    extension_store: None,
+                    extension_store: Some(Box::new(keiyoushi_store.clone())),
                     source: SourceNodeList::default(),
                 });
             }
@@ -1795,8 +1811,17 @@ impl QueryRoot {
     #[graphql(name = "extensionStore")]
     async fn extension_store(
         &self,
+        ctx: &Context<'_>,
         index_url: String,
     ) -> async_graphql::Result<Option<ExtensionStoreType>> {
+        let registry =
+            ctx.data::<std::sync::Arc<suwayomi_extensions::registry::ExtensionRegistry>>()?;
+        let available = registry
+            .get_available_extensions()
+            .await
+            .unwrap_or_default();
+        let total_count = available.len() as i32;
+
         Ok(Some(ExtensionStoreType {
             badge_label: "Official".to_string(),
             contact_discord: Some("https://discord.gg/keiyoushi".to_string()),
@@ -1809,13 +1834,18 @@ impl QueryRoot {
             is_legacy: false,
             name: "Keiyoushi".to_string(),
             signing_key: "".to_string(),
-            extensions: ExtensionNodeList::default(),
+            extensions: ExtensionNodeList {
+                nodes: vec![],
+                page_info: PageInfo::default(),
+                total_count,
+            },
         }))
     }
 
     #[graphql(name = "extensionStores")]
     async fn extension_stores(
         &self,
+        ctx: &Context<'_>,
         _condition: Option<ExtensionStoreConditionInput>,
         _filter: Option<ExtensionStoreFilterInput>,
         _order: Option<Vec<ExtensionStoreOrderInput>>,
@@ -1825,6 +1855,14 @@ impl QueryRoot {
         _last: Option<i32>,
         _offset: Option<i32>,
     ) -> async_graphql::Result<ExtensionStoreNodeList> {
+        let registry =
+            ctx.data::<std::sync::Arc<suwayomi_extensions::registry::ExtensionRegistry>>()?;
+        let available = registry
+            .get_available_extensions()
+            .await
+            .unwrap_or_default();
+        let total_count = available.len() as i32;
+
         let store = ExtensionStoreType {
             badge_label: "Official".to_string(),
             contact_discord: Some("https://discord.gg/keiyoushi".to_string()),
@@ -1838,7 +1876,11 @@ impl QueryRoot {
             is_legacy: false,
             name: "Keiyoushi".to_string(),
             signing_key: "".to_string(),
-            extensions: ExtensionNodeList::default(),
+            extensions: ExtensionNodeList {
+                nodes: vec![],
+                page_info: PageInfo::default(),
+                total_count,
+            },
         };
         Ok(ExtensionStoreNodeList {
             nodes: vec![store],
@@ -2189,6 +2231,46 @@ pub struct FetchMangaAndChaptersPayload {
     pub chapters: Option<Vec<ChapterType>>,
     #[graphql(name = "clientMutationId")]
     pub client_mutation_id: Option<String>,
+}
+
+#[derive(InputObject, Debug, Clone)]
+pub struct UpdateExtensionInput {
+    #[graphql(name = "clientMutationId")]
+    pub client_mutation_id: Option<String>,
+    #[graphql(name = "pkgName")]
+    pub pkg_name: Option<String>,
+    pub id: Option<String>,
+    pub install: Option<bool>,
+    pub uninstall: Option<bool>,
+    pub update: Option<bool>,
+    #[graphql(name = "isObsolete")]
+    pub is_obsolete: Option<bool>,
+}
+
+#[derive(SimpleObject, Debug, Clone)]
+pub struct UpdateExtensionPayload {
+    #[graphql(name = "clientMutationId")]
+    pub client_mutation_id: Option<String>,
+    pub extension: Option<ExtensionType>,
+}
+
+#[derive(InputObject, Debug, Clone)]
+pub struct UpdateExtensionsInput {
+    #[graphql(name = "clientMutationId")]
+    pub client_mutation_id: Option<String>,
+    #[graphql(name = "pkgNames")]
+    pub pkg_names: Option<Vec<String>>,
+    pub ids: Option<Vec<String>>,
+    pub install: Option<bool>,
+    pub uninstall: Option<bool>,
+    pub update: Option<bool>,
+}
+
+#[derive(SimpleObject, Debug, Clone)]
+pub struct UpdateExtensionsPayload {
+    #[graphql(name = "clientMutationId")]
+    pub client_mutation_id: Option<String>,
+    pub extensions: Option<Vec<ExtensionType>>,
 }
 
 #[derive(InputObject, Default, Clone)]
@@ -2968,42 +3050,15 @@ impl MutationRoot {
         ctx: &Context<'_>,
         input: FetchExtensionsInput,
     ) -> async_graphql::Result<FetchExtensionsPayload> {
-        let registry =
-            ctx.data::<std::sync::Arc<suwayomi_extensions::registry::ExtensionRegistry>>()?;
-        let _ = registry.get_available_extensions().await;
-        let exts = registry.get_installed_extensions().await;
-        let mut nodes = Vec::new();
-        for ext in exts {
-            nodes.push(ExtensionType {
-                pkg_name: ext.pkg_name.clone(),
-                name: ext.name.clone(),
-                lang: ext.lang.clone(),
-                version_code_long: ext.version_code.into(),
-                version_code: ext.version_code as i32,
-                version_name: ext.version_name.clone(),
-                icon_url: ext.icon_url.clone(),
-                apk_url: Some(ext.apk_url.clone()),
-                apk_name: None,
-                jar_url: None,
-                repo: None,
-                store_index_url: Some(
-                    "https://raw.githubusercontent.com/keiyoushi/extensions/repo/index.min.json"
-                        .to_string(),
-                ),
-                content_warning: if ext.is_nsfw {
-                    ContentWarning::Nsfw
-                } else {
-                    ContentWarning::Safe
-                },
-                is_installed: true,
-                is_nsfw: ext.is_nsfw,
-                is_obsolete: false,
-                has_update: false,
-                extension_lib: None,
-                extension_store: None,
-                source: SourceNodeList::default(),
-            });
-        }
+        let all_ext_nodes = QueryRoot
+            .extensions(ctx, None, None, None, None, None, None, None, None)
+            .await?
+            .nodes;
+        let available_nodes: Vec<ExtensionType> = all_ext_nodes
+            .iter()
+            .filter(|e| !e.is_installed)
+            .cloned()
+            .collect();
         let store = ExtensionStoreType {
             badge_label: "Official".to_string(),
             contact_discord: Some("https://discord.gg/keiyoushi".to_string()),
@@ -3017,12 +3072,74 @@ impl MutationRoot {
             is_legacy: false,
             name: "Keiyoushi".to_string(),
             signing_key: "".to_string(),
-            extensions: ExtensionNodeList::default(),
+            extensions: ExtensionNodeList {
+                total_count: available_nodes.len() as i32,
+                nodes: available_nodes,
+                page_info: PageInfo::default(),
+            },
         };
         Ok(FetchExtensionsPayload {
             client_mutation_id: input.client_mutation_id,
             extension_stores: Some(vec![store]),
-            extensions: Some(nodes),
+            extensions: Some(all_ext_nodes),
+        })
+    }
+
+    #[graphql(name = "updateExtension")]
+    async fn update_extension_mutation(
+        &self,
+        ctx: &Context<'_>,
+        input: UpdateExtensionInput,
+    ) -> async_graphql::Result<UpdateExtensionPayload> {
+        let registry =
+            ctx.data::<std::sync::Arc<suwayomi_extensions::registry::ExtensionRegistry>>()?;
+        let pkg_name = input
+            .pkg_name
+            .or(input.id)
+            .ok_or_else(|| async_graphql::Error::new("pkgName or id is required"))?;
+
+        if input.uninstall == Some(true) {
+            let _ = registry.uninstall_extension(&pkg_name).await;
+        } else if input.install == Some(true) || input.update == Some(true) {
+            let _ = registry.install_extension(&pkg_name).await;
+        }
+
+        let updated_ext = QueryRoot.extension(ctx, pkg_name).await?;
+
+        Ok(UpdateExtensionPayload {
+            client_mutation_id: input.client_mutation_id,
+            extension: updated_ext,
+        })
+    }
+
+    #[graphql(name = "updateExtensions")]
+    async fn update_extensions_mutation(
+        &self,
+        ctx: &Context<'_>,
+        input: UpdateExtensionsInput,
+    ) -> async_graphql::Result<UpdateExtensionsPayload> {
+        let registry =
+            ctx.data::<std::sync::Arc<suwayomi_extensions::registry::ExtensionRegistry>>()?;
+        let pkg_names = input.pkg_names.or(input.ids).unwrap_or_default();
+
+        for pkg in &pkg_names {
+            if input.uninstall == Some(true) {
+                let _ = registry.uninstall_extension(pkg).await;
+            } else if input.install == Some(true) || input.update == Some(true) {
+                let _ = registry.install_extension(pkg).await;
+            }
+        }
+
+        let mut updated_exts = Vec::new();
+        for pkg in pkg_names {
+            if let Ok(Some(ext)) = QueryRoot.extension(ctx, pkg).await {
+                updated_exts.push(ext);
+            }
+        }
+
+        Ok(UpdateExtensionsPayload {
+            client_mutation_id: input.client_mutation_id,
+            extensions: Some(updated_exts),
         })
     }
 
