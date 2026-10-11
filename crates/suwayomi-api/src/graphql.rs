@@ -3036,7 +3036,7 @@ impl MutationRoot {
         let registry =
             ctx.data::<std::sync::Arc<suwayomi_extensions::registry::ExtensionRegistry>>()?;
         let _ = registry.get_available_extensions().await;
-        let exts = self
+        let exts = QueryRoot
             .extensions(ctx, None, None, None, None, None, None, None, None)
             .await?;
         let available_count = exts.nodes.iter().filter(|e| !e.is_installed).count();
@@ -3087,7 +3087,7 @@ impl MutationRoot {
             let _ = registry.install_extension(&pkg_name).await;
         }
 
-        let ext = self.extension(ctx, pkg_name).await?;
+        let ext = QueryRoot.extension(ctx, pkg_name).await?;
         Ok(UpdateExtensionPayload {
             client_mutation_id: input.client_mutation_id,
             extension: ext,
@@ -3116,7 +3116,7 @@ impl MutationRoot {
             }
         }
 
-        let all = self
+        let all = QueryRoot
             .extensions(ctx, None, None, None, None, None, None, None, None)
             .await?;
         let matched: Vec<ExtensionType> = all
