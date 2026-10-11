@@ -211,11 +211,17 @@ async fn test_relay_extensions_graphql() {
     assert_eq!(response.status(), StatusCode::OK);
     let body_bytes = response.into_body().collect().await.unwrap().to_bytes();
     let resp_json: serde_json::Value = serde_json::from_slice(&body_bytes).unwrap();
-    let data = resp_json.get("data").expect("Missing data in fetchExtensions");
+    let data = resp_json
+        .get("data")
+        .expect("Missing data in fetchExtensions");
     let fetch_exts = data.get("fetchExtensions").unwrap();
     let exts = fetch_exts.get("extensions").unwrap().as_array().unwrap();
-    assert!(exts.iter().any(|e| e["pkgName"] == "eu.kanade.tachiyomi.extension.en.allanime"));
-    assert!(exts.iter().any(|e| e["pkgName"] == "eu.kanade.tachiyomi.extension.all.mangadex"));
+    assert!(exts
+        .iter()
+        .any(|e| e["pkgName"] == "eu.kanade.tachiyomi.extension.en.allanime"));
+    assert!(exts
+        .iter()
+        .any(|e| e["pkgName"] == "eu.kanade.tachiyomi.extension.all.mangadex"));
 
     // 2. Test updateExtension mutation (uninstall)
     let update_query = r#"
@@ -242,7 +248,9 @@ async fn test_relay_extensions_graphql() {
     assert_eq!(response.status(), StatusCode::OK);
     let body_bytes = response.into_body().collect().await.unwrap().to_bytes();
     let resp_json: serde_json::Value = serde_json::from_slice(&body_bytes).unwrap();
-    let data = resp_json.get("data").expect("Missing data in updateExtension");
+    let data = resp_json
+        .get("data")
+        .expect("Missing data in updateExtension");
     let ext = &data["updateExtension"]["extension"];
     assert_eq!(ext["isInstalled"], false);
 }

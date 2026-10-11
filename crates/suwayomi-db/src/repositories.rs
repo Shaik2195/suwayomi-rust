@@ -256,6 +256,90 @@ impl<'a> MangaMetaRepository<'a> {
     }
 }
 
+// Source Meta Repository
+pub struct SourceMetaRepository<'a> {
+    pool: &'a SqlitePool,
+}
+
+impl<'a> SourceMetaRepository<'a> {
+    pub fn new(pool: &'a SqlitePool) -> Self {
+        Self { pool }
+    }
+
+    pub async fn get_by_source_id(&self, source_id: i64) -> Result<Vec<(String, String)>> {
+        let rows = sqlx::query("SELECT key, value FROM source_meta WHERE source_id = ?")
+            .bind(source_id)
+            .fetch_all(self.pool)
+            .await
+            .map_err(|e| SuwayomiError::Database(e.to_string()))?;
+
+        Ok(rows
+            .iter()
+            .map(|r| (r.get("key"), r.get("value")))
+            .collect())
+    }
+
+    pub async fn set_meta(&self, source_id: i64, key: &str, value: &str) -> Result<()> {
+        sqlx::query(
+            "INSERT INTO source_meta (source_id, key, value) VALUES (?, ?, ?) ON CONFLICT(source_id, key) DO UPDATE SET value = excluded.value",
+        )
+        .bind(source_id)
+        .bind(key)
+        .bind(value)
+        .execute(self.pool)
+        .await
+        .map_err(|e| SuwayomiError::Database(e.to_string()))?;
+        Ok(())
+    }
+
+    pub async fn delete_meta(&self, source_id: i64, key: &str) -> Result<()> {
+        sqlx::query("DELETE FROM source_meta WHERE source_id = ? AND key = ?")
+            .bind(source_id)
+            .bind(key)
+            .execute(self.pool)
+            .await
+            .map_err(|e| SuwayomiError::Database(e.to_string()))?;
+        Ok(())
+    }
+
+    pub async fn delete_metas(
+        &self,
+        source_id: i64,
+        keys: &[String],
+        prefixes: &[String],
+    ) -> Result<()> {
+        let mut tx = self
+            .pool
+            .begin()
+            .await
+            .map_err(|e| SuwayomiError::Database(e.to_string()))?;
+
+        for key in keys {
+            sqlx::query("DELETE FROM source_meta WHERE source_id = ? AND key = ?")
+                .bind(source_id)
+                .bind(key)
+                .execute(&mut *tx)
+                .await
+                .map_err(|e| SuwayomiError::Database(e.to_string()))?;
+        }
+
+        for prefix in prefixes {
+            let pattern = format!("{}%", prefix);
+            sqlx::query("DELETE FROM source_meta WHERE source_id = ? AND key LIKE ?")
+                .bind(source_id)
+                .bind(pattern)
+                .execute(&mut *tx)
+                .await
+                .map_err(|e| SuwayomiError::Database(e.to_string()))?;
+        }
+
+        tx.commit()
+            .await
+            .map_err(|e| SuwayomiError::Database(e.to_string()))?;
+        Ok(())
+    }
+}
+
 // Server Settings Repository
 pub struct ServerSettingsRepository<'a> {
     pool: &'a SqlitePool,

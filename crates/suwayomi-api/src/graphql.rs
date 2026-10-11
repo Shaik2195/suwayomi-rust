@@ -11,7 +11,7 @@ use sqlx::SqlitePool;
 use suwayomi_core::models;
 use suwayomi_db::repositories::{
     CategoryRepository, ChapterRepository, MangaMetaRepository, MangaRepository,
-    ServerSettingsRepository,
+    ServerSettingsRepository, SourceMetaRepository,
 };
 
 // --- Custom Scalars ---
@@ -758,6 +758,163 @@ pub struct SourceNodeList {
 
 // Backward-compatibility alias for Source
 pub type Source = SourceType;
+
+#[derive(Enum, Copy, Clone, Eq, PartialEq, Debug)]
+pub enum FetchSourceMangaType {
+    #[graphql(name = "SEARCH")]
+    Search,
+    #[graphql(name = "POPULAR")]
+    Popular,
+    #[graphql(name = "LATEST")]
+    Latest,
+}
+
+#[derive(InputObject, Clone, Debug)]
+pub struct SortStateInput {
+    pub index: i32,
+    pub ascending: bool,
+}
+
+#[derive(InputObject, Clone, Debug)]
+pub struct FilterChangeInput {
+    pub position: Option<i32>,
+    pub check_box_state: Option<bool>,
+    pub select_state: Option<i32>,
+    pub sort_state: Option<SortStateInput>,
+    pub text_state: Option<String>,
+    pub tri_state: Option<i32>,
+}
+
+#[derive(InputObject, Clone, Debug)]
+pub struct FetchSourceMangaInput {
+    #[graphql(name = "clientMutationId")]
+    pub client_mutation_id: Option<String>,
+    pub source: Option<LongString>,
+    #[graphql(name = "sourceId")]
+    pub source_id: Option<LongString>,
+    pub r#type: FetchSourceMangaType,
+    pub page: Option<i32>,
+    pub query: Option<String>,
+    pub filters: Option<Vec<FilterChangeInput>>,
+}
+
+#[derive(SimpleObject, Clone)]
+pub struct FetchSourceMangaPayload {
+    #[graphql(name = "clientMutationId")]
+    pub client_mutation_id: Option<String>,
+    pub mangas: Vec<MangaType>,
+    #[graphql(name = "hasNextPage")]
+    pub has_next_page: bool,
+}
+
+#[derive(InputObject, Default, Clone)]
+pub struct SetSourceMetasItemInput {
+    #[graphql(name = "sourceIds")]
+    pub source_ids: Vec<LongString>,
+    pub metas: Vec<MetaInput>,
+}
+
+#[derive(InputObject, Default, Clone)]
+pub struct SetSourceMetasInput {
+    #[graphql(name = "clientMutationId")]
+    pub client_mutation_id: Option<String>,
+    pub items: Vec<SetSourceMetasItemInput>,
+}
+
+#[derive(SimpleObject, Default, Clone)]
+pub struct SetSourceMetasPayload {
+    #[graphql(name = "clientMutationId")]
+    pub client_mutation_id: Option<String>,
+    pub metas: Option<Vec<SourceMetaType>>,
+    pub sources: Option<Vec<SourceType>>,
+}
+
+#[derive(InputObject, Default, Clone)]
+pub struct DeleteSourceMetasItemInput {
+    #[graphql(name = "sourceIds")]
+    pub source_ids: Vec<LongString>,
+    pub keys: Option<Vec<String>>,
+    pub prefixes: Option<Vec<String>>,
+}
+
+#[derive(InputObject, Default, Clone)]
+pub struct DeleteSourceMetasInput {
+    #[graphql(name = "clientMutationId")]
+    pub client_mutation_id: Option<String>,
+    pub items: Vec<DeleteSourceMetasItemInput>,
+}
+
+#[derive(SimpleObject, Default, Clone)]
+pub struct DeleteSourceMetasPayload {
+    #[graphql(name = "clientMutationId")]
+    pub client_mutation_id: Option<String>,
+    pub metas: Option<Vec<SourceMetaType>>,
+    pub sources: Option<Vec<SourceType>>,
+}
+
+#[derive(InputObject, Default, Clone)]
+pub struct SetSourceMetaInput {
+    #[graphql(name = "clientMutationId")]
+    pub client_mutation_id: Option<String>,
+    #[graphql(name = "sourceId")]
+    pub source_id: Option<LongString>,
+    pub key: Option<String>,
+    pub value: Option<String>,
+}
+
+#[derive(SimpleObject, Default, Clone)]
+pub struct SetSourceMetaPayload {
+    #[graphql(name = "clientMutationId")]
+    pub client_mutation_id: Option<String>,
+    pub meta: Option<SourceMetaType>,
+    pub source: Option<SourceType>,
+}
+
+#[derive(InputObject, Default, Clone)]
+pub struct DeleteSourceMetaInput {
+    #[graphql(name = "clientMutationId")]
+    pub client_mutation_id: Option<String>,
+    #[graphql(name = "sourceId")]
+    pub source_id: Option<LongString>,
+    pub key: Option<String>,
+}
+
+#[derive(SimpleObject, Default, Clone)]
+pub struct DeleteSourceMetaPayload {
+    #[graphql(name = "clientMutationId")]
+    pub client_mutation_id: Option<String>,
+    pub meta: Option<SourceMetaType>,
+    pub source: Option<SourceType>,
+}
+
+#[derive(InputObject, Default, Clone)]
+pub struct PreferenceChangeInput {
+    pub position: Option<i32>,
+    #[graphql(name = "checkBoxState")]
+    pub check_box_state: Option<bool>,
+    #[graphql(name = "editTextState")]
+    pub edit_text_state: Option<String>,
+    #[graphql(name = "multiSelectState")]
+    pub multi_select_state: Option<Vec<String>>,
+    #[graphql(name = "selectState")]
+    pub select_state: Option<String>,
+}
+
+#[derive(InputObject, Default, Clone)]
+pub struct UpdateSourcePreferenceInput {
+    #[graphql(name = "clientMutationId")]
+    pub client_mutation_id: Option<String>,
+    #[graphql(name = "sourceId")]
+    pub source_id: Option<LongString>,
+    pub change: Option<PreferenceChangeInput>,
+}
+
+#[derive(SimpleObject, Default, Clone)]
+pub struct UpdateSourcePreferencePayload {
+    #[graphql(name = "clientMutationId")]
+    pub client_mutation_id: Option<String>,
+    pub source: Option<SourceType>,
+}
 
 #[derive(InputObject, Default, Clone)]
 pub struct ExtensionOrderInput {
@@ -1678,6 +1835,27 @@ impl QueryRoot {
                     source: SourceNodeList::default(),
                 };
 
+                let pool = ctx.data::<SqlitePool>().ok();
+                let meta_list = if let Some(p) = pool {
+                    if let Ok(sid_num) = id.parse::<i64>() {
+                        SourceMetaRepository::new(p)
+                            .get_by_source_id(sid_num)
+                            .await
+                            .unwrap_or_default()
+                            .into_iter()
+                            .map(|(k, v)| SourceMetaType {
+                                source_id: id.clone().into(),
+                                key: k,
+                                value: v,
+                            })
+                            .collect()
+                    } else {
+                        vec![]
+                    }
+                } else {
+                    vec![]
+                };
+
                 nodes.push(SourceType {
                     id: id.into(),
                     name: ext.name.clone(),
@@ -1695,7 +1873,7 @@ impl QueryRoot {
                     base_url: None,
                     home_url: None,
                     extension: Some(Box::new(ext_type)),
-                    meta: vec![],
+                    meta: meta_list,
                 });
             }
         }
@@ -1754,8 +1932,9 @@ impl QueryRoot {
                     "https://raw.githubusercontent.com/keiyoushi/extensions/repo/index.min.json"
                         .to_string(),
                 ),
-                index_url: "https://raw.githubusercontent.com/keiyoushi/extensions/repo/index.min.json"
-                    .to_string(),
+                index_url:
+                    "https://raw.githubusercontent.com/keiyoushi/extensions/repo/index.min.json"
+                        .to_string(),
                 is_legacy: false,
                 name: "Keiyoushi".to_string(),
                 signing_key: "".to_string(),
@@ -3055,7 +3234,12 @@ impl MutationRoot {
             name: "Keiyoushi".to_string(),
             signing_key: "".to_string(),
             extensions: ExtensionNodeList {
-                nodes: exts.nodes.iter().filter(|e| !e.is_installed).cloned().collect(),
+                nodes: exts
+                    .nodes
+                    .iter()
+                    .filter(|e| !e.is_installed)
+                    .cloned()
+                    .collect(),
                 page_info: PageInfo::default(),
                 total_count: available_count as i32,
             },
@@ -3079,7 +3263,9 @@ impl MutationRoot {
             .pkg_name
             .clone()
             .or_else(|| input.id.clone())
-            .ok_or_else(|| async_graphql::Error::new("Missing pkg_name or id in UpdateExtensionInput"))?;
+            .ok_or_else(|| {
+                async_graphql::Error::new("Missing pkg_name or id in UpdateExtensionInput")
+            })?;
 
         if input.uninstall == Some(true) {
             let _ = registry.uninstall_extension(&pkg_name).await;
@@ -3152,6 +3338,226 @@ impl MutationRoot {
         Ok(UpdateExtensionsPayload {
             client_mutation_id: input.client_mutation_id,
             extensions: Some(matched),
+        })
+    }
+
+    #[graphql(name = "fetchSourceManga")]
+    async fn fetch_source_manga(
+        &self,
+        ctx: &Context<'_>,
+        input: FetchSourceMangaInput,
+    ) -> async_graphql::Result<FetchSourceMangaPayload> {
+        let pool = ctx.data::<SqlitePool>()?;
+        let registry =
+            ctx.data::<std::sync::Arc<suwayomi_extensions::registry::ExtensionRegistry>>()?;
+
+        let source_id_str = input
+            .source
+            .as_ref()
+            .or(input.source_id.as_ref())
+            .map(|ls| ls.0.clone())
+            .ok_or_else(|| async_graphql::Error::new("Missing source or sourceId in input"))?;
+
+        let sid = source_id_str
+            .parse::<i64>()
+            .map_err(|_| async_graphql::Error::new("Invalid source ID"))?;
+
+        let source = registry
+            .get_source(sid)
+            .ok_or_else(|| async_graphql::Error::new(format!("Source {} not found", sid)))?;
+
+        let page_num = input.page.unwrap_or(1);
+
+        let page_res = match input.r#type {
+            FetchSourceMangaType::Popular => source.get_popular_manga(page_num).await,
+            FetchSourceMangaType::Latest => source.get_latest_updates(page_num).await,
+            FetchSourceMangaType::Search => {
+                source
+                    .search_manga(input.query.as_deref().unwrap_or(""), &[], page_num)
+                    .await
+            }
+        }
+        .map_err(|e| async_graphql::Error::new(e.to_string()))?;
+
+        let manga_repo = MangaRepository::new(pool);
+        let chapter_repo = ChapterRepository::new(pool);
+
+        let mut mangas = Vec::new();
+        for mut m in page_res.manga_list {
+            let existing = manga_repo.get_by_url(&m.url).await?;
+            let db_manga = if let Some(existing_manga) = existing {
+                let mut updated = existing_manga.clone();
+                if updated.title != m.title || updated.thumbnail_url != m.thumbnail_url {
+                    updated.title = m.title;
+                    updated.thumbnail_url = m.thumbnail_url;
+                    let _ = manga_repo.update(&updated).await;
+                }
+                updated
+            } else {
+                m.initialized = false;
+                let id = manga_repo.insert(&m).await?;
+                m.id = id;
+                m
+            };
+
+            let chapters = chapter_repo.get_by_manga_id(db_manga.id).await?;
+            mangas.push(MangaType::from_model(db_manga, chapters));
+        }
+
+        Ok(FetchSourceMangaPayload {
+            client_mutation_id: input.client_mutation_id,
+            mangas,
+            has_next_page: page_res.has_next_page,
+        })
+    }
+
+    #[graphql(name = "setSourceMetas")]
+    async fn set_source_metas(
+        &self,
+        ctx: &Context<'_>,
+        input: SetSourceMetasInput,
+    ) -> async_graphql::Result<SetSourceMetasPayload> {
+        let pool = ctx.data::<SqlitePool>()?;
+        let repo = SourceMetaRepository::new(pool);
+
+        let mut metas = Vec::new();
+        for item in &input.items {
+            for sid_ls in &item.source_ids {
+                if let Ok(sid) = sid_ls.0.parse::<i64>() {
+                    for meta in &item.metas {
+                        repo.set_meta(sid, &meta.key, &meta.value).await?;
+                        metas.push(SourceMetaType {
+                            source_id: sid_ls.clone(),
+                            key: meta.key.clone(),
+                            value: meta.value.clone(),
+                        });
+                    }
+                }
+            }
+        }
+
+        let sources = QueryRoot
+            .sources(ctx, None, None, None, None, None, None, None, None)
+            .await?
+            .nodes;
+
+        Ok(SetSourceMetasPayload {
+            client_mutation_id: input.client_mutation_id,
+            metas: Some(metas),
+            sources: Some(sources),
+        })
+    }
+
+    #[graphql(name = "deleteSourceMetas")]
+    async fn delete_source_metas(
+        &self,
+        ctx: &Context<'_>,
+        input: DeleteSourceMetasInput,
+    ) -> async_graphql::Result<DeleteSourceMetasPayload> {
+        let pool = ctx.data::<SqlitePool>()?;
+        let repo = SourceMetaRepository::new(pool);
+
+        for item in &input.items {
+            for sid_ls in &item.source_ids {
+                if let Ok(sid) = sid_ls.0.parse::<i64>() {
+                    let keys = item.keys.as_deref().unwrap_or(&[]);
+                    let prefixes = item.prefixes.as_deref().unwrap_or(&[]);
+                    repo.delete_metas(sid, keys, prefixes).await?;
+                }
+            }
+        }
+
+        let sources = QueryRoot
+            .sources(ctx, None, None, None, None, None, None, None, None)
+            .await?
+            .nodes;
+
+        Ok(DeleteSourceMetasPayload {
+            client_mutation_id: input.client_mutation_id,
+            metas: Some(vec![]),
+            sources: Some(sources),
+        })
+    }
+
+    #[graphql(name = "setSourceMeta")]
+    async fn set_source_meta(
+        &self,
+        ctx: &Context<'_>,
+        input: SetSourceMetaInput,
+    ) -> async_graphql::Result<SetSourceMetaPayload> {
+        let pool = ctx.data::<SqlitePool>()?;
+        let repo = SourceMetaRepository::new(pool);
+
+        let mut meta_type = None;
+        if let (Some(ref sid_ls), Some(ref key), Some(ref value)) =
+            (&input.source_id, &input.key, &input.value)
+        {
+            if let Ok(sid) = sid_ls.0.parse::<i64>() {
+                repo.set_meta(sid, key, value).await?;
+                meta_type = Some(SourceMetaType {
+                    source_id: sid_ls.clone(),
+                    key: key.clone(),
+                    value: value.clone(),
+                });
+            }
+        }
+
+        let source = if let Some(ref sid_ls) = input.source_id {
+            QueryRoot.source(ctx, sid_ls.clone()).await?
+        } else {
+            None
+        };
+
+        Ok(SetSourceMetaPayload {
+            client_mutation_id: input.client_mutation_id,
+            meta: meta_type,
+            source,
+        })
+    }
+
+    #[graphql(name = "deleteSourceMeta")]
+    async fn delete_source_meta(
+        &self,
+        ctx: &Context<'_>,
+        input: DeleteSourceMetaInput,
+    ) -> async_graphql::Result<DeleteSourceMetaPayload> {
+        let pool = ctx.data::<SqlitePool>()?;
+        let repo = SourceMetaRepository::new(pool);
+
+        if let (Some(ref sid_ls), Some(ref key)) = (&input.source_id, &input.key) {
+            if let Ok(sid) = sid_ls.0.parse::<i64>() {
+                repo.delete_meta(sid, key).await?;
+            }
+        }
+
+        let source = if let Some(ref sid_ls) = input.source_id {
+            QueryRoot.source(ctx, sid_ls.clone()).await?
+        } else {
+            None
+        };
+
+        Ok(DeleteSourceMetaPayload {
+            client_mutation_id: input.client_mutation_id,
+            meta: None,
+            source,
+        })
+    }
+
+    #[graphql(name = "updateSourcePreference")]
+    async fn update_source_preference(
+        &self,
+        ctx: &Context<'_>,
+        input: UpdateSourcePreferenceInput,
+    ) -> async_graphql::Result<UpdateSourcePreferencePayload> {
+        let source = if let Some(ref sid_ls) = input.source_id {
+            QueryRoot.source(ctx, sid_ls.clone()).await?
+        } else {
+            None
+        };
+
+        Ok(UpdateSourcePreferencePayload {
+            client_mutation_id: input.client_mutation_id,
+            source,
         })
     }
 
