@@ -9,7 +9,10 @@ use axum::{
 use sqlx::SqlitePool;
 
 use suwayomi_core::models;
-use suwayomi_db::repositories::{CategoryRepository, ChapterRepository, MangaRepository};
+use suwayomi_db::repositories::{
+    CategoryRepository, ChapterRepository, MangaMetaRepository, MangaRepository,
+    ServerSettingsRepository,
+};
 
 // --- Custom Scalars ---
 
@@ -463,8 +466,7 @@ impl MangaType {
             .map(ChapterType::from);
         let last_read = chapters
             .iter()
-            .filter(|c| c.read)
-            .next_back()
+            .rfind(|c| c.read)
             .cloned()
             .map(ChapterType::from);
         let latest_uploaded = chapters.first().cloned().map(ChapterType::from);
@@ -1455,6 +1457,7 @@ impl QueryRoot {
         let pool = ctx.data::<SqlitePool>()?;
         let manga_repo = MangaRepository::new(pool);
         let chapter_repo = ChapterRepository::new(pool);
+        let meta_repo = MangaMetaRepository::new(pool);
 
         let raw_mangas = manga_repo.get_library().await?;
         let mut nodes = Vec::new();
@@ -1473,7 +1476,18 @@ impl QueryRoot {
                 }
             }
             let chapters = chapter_repo.get_by_manga_id(m.id).await?;
-            nodes.push(MangaType::from_model(m, chapters));
+            let mut manga_type = MangaType::from_model(m.clone(), chapters);
+            if let Ok(metas) = meta_repo.get_by_manga_id(m.id).await {
+                manga_type.meta = metas
+                    .into_iter()
+                    .map(|meta| MangaMetaType {
+                        manga_id: meta.manga_id,
+                        key: meta.key,
+                        value: meta.value,
+                    })
+                    .collect();
+            }
+            nodes.push(manga_type);
         }
 
         let count = nodes.len() as i32;
@@ -1489,10 +1503,22 @@ impl QueryRoot {
         let pool = ctx.data::<SqlitePool>()?;
         let manga_repo = MangaRepository::new(pool);
         let chapter_repo = ChapterRepository::new(pool);
+        let meta_repo = MangaMetaRepository::new(pool);
 
         if let Some(m) = manga_repo.get_by_id(id).await? {
             let chapters = chapter_repo.get_by_manga_id(m.id).await?;
-            Ok(Some(MangaType::from_model(m, chapters)))
+            let mut manga_type = MangaType::from_model(m, chapters);
+            if let Ok(metas) = meta_repo.get_by_manga_id(id).await {
+                manga_type.meta = metas
+                    .into_iter()
+                    .map(|meta| MangaMetaType {
+                        manga_id: meta.manga_id,
+                        key: meta.key,
+                        value: meta.value,
+                    })
+                    .collect();
+            }
+            Ok(Some(manga_type))
         } else {
             Ok(None)
         }
@@ -1825,7 +1851,7 @@ impl QueryRoot {
     async fn metas(
         &self,
         ctx: &Context<'_>,
-        _condition: Option<MetaConditionInput>,
+        condition: Option<MetaConditionInput>,
         _filter: Option<MetaFilterInput>,
         _order: Option<Vec<MetaOrderInput>>,
         _before: Option<Cursor>,
@@ -1835,17 +1861,28 @@ impl QueryRoot {
         _offset: Option<i32>,
     ) -> async_graphql::Result<GlobalMetaNodeList> {
         let pool = ctx.data::<SqlitePool>()?;
-        let repo = suwayomi_db::repositories::ServerSettingsRepository::new(pool);
-        let settings = repo.get_all().await.unwrap_or_default();
-        let nodes: Vec<GlobalMetaType> = settings
+        let settings_repo = ServerSettingsRepository::new(pool);
+        let settings = settings_repo.get_all().await?;
+
+        let mut nodes: Vec<GlobalMetaType> = settings
             .into_iter()
             .map(|(key, value)| GlobalMetaType { key, value })
             .collect();
-        let total_count = nodes.len() as i32;
+
+        if let Some(cond) = condition {
+            if let Some(ref k) = cond.key {
+                nodes.retain(|m| &m.key == k);
+            }
+            if let Some(ref v) = cond.value {
+                nodes.retain(|m| &m.value == v);
+            }
+        }
+
+        let count = nodes.len() as i32;
         Ok(GlobalMetaNodeList {
             nodes,
             page_info: PageInfo::default(),
-            total_count,
+            total_count: count,
         })
     }
 
@@ -2002,7 +2039,6 @@ impl QueryRoot {
     ) -> async_graphql::Result<Vec<CheckForServerUpdatesPayload>> {
         Ok(vec![])
     }
-
 
     // --- Legacy / Direct Helper Queries ---
 
@@ -2848,12 +2884,13 @@ impl MutationRoot {
         input: SetMangaMetasInput,
     ) -> async_graphql::Result<SetMangaMetasPayload> {
         let pool = ctx.data::<SqlitePool>()?;
-        let repo = suwayomi_db::repositories::MangaMetaRepository::new(pool);
+        let repo = MangaMetaRepository::new(pool);
+
         let mut metas = Vec::new();
         for item in &input.items {
             for manga_id in &item.manga_ids {
                 for meta in &item.metas {
-                    let _ = repo.upsert(*manga_id, &meta.key, &meta.value).await;
+                    repo.upsert(*manga_id, &meta.key, &meta.value).await?;
                     metas.push(MangaMetaType {
                         manga_id: *manga_id,
                         key: meta.key.clone(),
@@ -2875,12 +2912,13 @@ impl MutationRoot {
         input: DeleteMangaMetasInput,
     ) -> async_graphql::Result<DeleteMangaMetasPayload> {
         let pool = ctx.data::<SqlitePool>()?;
-        let repo = suwayomi_db::repositories::MangaMetaRepository::new(pool);
+        let repo = MangaMetaRepository::new(pool);
+
         for item in &input.items {
             for manga_id in &item.manga_ids {
                 if let Some(keys) = &item.keys {
                     for key in keys {
-                        let _ = repo.delete(*manga_id, key).await;
+                        repo.delete(*manga_id, key).await?;
                     }
                 }
             }
@@ -2898,10 +2936,10 @@ impl MutationRoot {
         input: SetGlobalMetasInput,
     ) -> async_graphql::Result<SetGlobalMetasPayload> {
         let pool = ctx.data::<SqlitePool>()?;
-        let repo = suwayomi_db::repositories::ServerSettingsRepository::new(pool);
+        let repo = ServerSettingsRepository::new(pool);
         let mut metas = Vec::new();
         for meta in &input.metas {
-            let _ = repo.upsert(&meta.key, &meta.value).await;
+            repo.upsert(&meta.key, &meta.value).await?;
             metas.push(GlobalMetaType {
                 key: meta.key.clone(),
                 value: meta.value.clone(),

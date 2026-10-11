@@ -21,6 +21,22 @@ fn get_referer_header(url: &str) -> Option<&'static str> {
     }
 }
 
+fn detect_content_type(bytes: &[u8], url_or_path: &str) -> &'static str {
+    if bytes.starts_with(&[0x89, 0x50, 0x4E, 0x47]) {
+        "image/png"
+    } else if bytes.len() >= 12 && &bytes[0..4] == b"RIFF" && &bytes[8..12] == b"WEBP" {
+        "image/webp"
+    } else if bytes.starts_with(&[0xFF, 0xD8, 0xFF]) {
+        "image/jpeg"
+    } else if url_or_path.ends_with(".png") {
+        "image/png"
+    } else if url_or_path.ends_with(".webp") {
+        "image/webp"
+    } else {
+        "image/jpeg"
+    }
+}
+
 pub async fn get_manga(
     State(state): State<AppState>,
     Path(id): Path<i64>,
@@ -54,9 +70,13 @@ pub async fn get_manga_thumbnail(
     let cache_file = cache_dir.join(id.to_string());
 
     if let Ok(bytes) = tokio::fs::read(&cache_file).await {
+        let content_type = detect_content_type(&bytes, &cache_file.to_string_lossy());
         return Ok((
             StatusCode::OK,
-            [(axum::http::header::CONTENT_TYPE, "image/jpeg")],
+            [
+                (axum::http::header::CONTENT_TYPE, content_type),
+                (axum::http::header::CACHE_CONTROL, "public, max-age=86400"),
+            ],
             bytes,
         ));
     }
@@ -84,9 +104,14 @@ pub async fn get_manga_thumbnail(
         let _ = file.write_all(&bytes).await;
     }
 
+    let content_type = detect_content_type(&bytes, &thumbnail_url);
+
     Ok((
         StatusCode::OK,
-        [(axum::http::header::CONTENT_TYPE, "image/jpeg")],
+        [
+            (axum::http::header::CONTENT_TYPE, content_type),
+            (axum::http::header::CACHE_CONTROL, "public, max-age=86400"),
+        ],
         bytes.to_vec(),
     ))
 }
@@ -116,9 +141,13 @@ pub async fn get_chapter_page(
         manga_id, chapter_id, page
     ));
     if let Ok(bytes) = tokio::fs::read(&dl_path).await {
+        let content_type = detect_content_type(&bytes, &dl_path.to_string_lossy());
         return Ok((
             StatusCode::OK,
-            [(axum::http::header::CONTENT_TYPE, "image/jpeg")],
+            [
+                (axum::http::header::CONTENT_TYPE, content_type),
+                (axum::http::header::CACHE_CONTROL, "public, max-age=86400"),
+            ],
             bytes,
         ));
     }
@@ -126,9 +155,13 @@ pub async fn get_chapter_page(
     let cache_dir = PathBuf::from(format!("./data/cache/pages/{}", chapter_id));
     let cache_file = cache_dir.join(page.to_string());
     if let Ok(bytes) = tokio::fs::read(&cache_file).await {
+        let content_type = detect_content_type(&bytes, &cache_file.to_string_lossy());
         return Ok((
             StatusCode::OK,
-            [(axum::http::header::CONTENT_TYPE, "image/jpeg")],
+            [
+                (axum::http::header::CONTENT_TYPE, content_type),
+                (axum::http::header::CACHE_CONTROL, "public, max-age=86400"),
+            ],
             bytes,
         ));
     }
@@ -196,9 +229,14 @@ pub async fn get_chapter_page(
         let _ = file.write_all(&bytes).await;
     }
 
+    let content_type = detect_content_type(&bytes, &image_url);
+
     Ok((
         StatusCode::OK,
-        [(axum::http::header::CONTENT_TYPE, "image/jpeg")],
+        [
+            (axum::http::header::CONTENT_TYPE, content_type),
+            (axum::http::header::CACHE_CONTROL, "public, max-age=86400"),
+        ],
         bytes.to_vec(),
     ))
 }

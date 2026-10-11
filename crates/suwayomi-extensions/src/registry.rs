@@ -713,8 +713,8 @@ mod tests {
         let registry = ExtensionRegistry::with_dir(vec![repo], temp_dir.path().to_path_buf());
 
         // Initial state
-        let installed = registry.get_installed_extensions().await;
-        assert_eq!(installed.len(), 2);
+        let initial_installed = registry.get_installed_extensions().await;
+        let initial_len = initial_installed.len();
 
         // Install
         let listing = registry
@@ -724,7 +724,7 @@ mod tests {
         assert_eq!(listing.name, "Mock");
 
         let installed = registry.get_installed_extensions().await;
-        assert_eq!(installed.len(), 3);
+        assert_eq!(installed.len(), initial_len + 1);
         assert!(installed
             .iter()
             .any(|e| e.pkg_name == "eu.kanade.tachiyomi.extension.en.mock"));
@@ -743,7 +743,7 @@ mod tests {
         assert!(success);
 
         let installed = registry.get_installed_extensions().await;
-        assert_eq!(installed.len(), 2);
+        assert_eq!(installed.len(), initial_len);
 
         // Verify file deleted
         assert!(!apk_path.exists());

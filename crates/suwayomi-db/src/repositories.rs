@@ -272,7 +272,10 @@ impl<'a> ServerSettingsRepository<'a> {
             .await
             .map_err(|e| SuwayomiError::Database(e.to_string()))?;
 
-        Ok(rows.iter().map(|r| (r.get("key"), r.get("value"))).collect())
+        Ok(rows
+            .iter()
+            .map(|r| (r.get("key"), r.get("value")))
+            .collect())
     }
 
     pub async fn get_by_key(&self, key: &str) -> Result<Option<String>> {
