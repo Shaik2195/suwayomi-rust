@@ -27,3 +27,4 @@ http-body-util = "0.1.5"
 httpmock = "0.8.3"
 tempfile = "3.27.0"
 tower = { version = "0.5.3", features = ["util"] }
+tokio-tungstenite = "0.24.0"

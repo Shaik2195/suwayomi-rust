@@ -40,11 +40,11 @@ pub fn create_router(state: AppState) -> Router {
     Router::new()
         .route(
             "/graphql",
-            post(graphql::graphql_handler).get(graphql::graphql_playground),
+            post(graphql::graphql_handler).get(graphql::graphql_get_handler),
         )
         .route(
             "/api/graphql",
-            post(graphql::graphql_handler).get(graphql::graphql_playground),
+            post(graphql::graphql_handler).get(graphql::graphql_get_handler),
         )
         .route("/ws", get(ws::ws_handler).with_state(ws_state))
         .nest("/api/v1", api_routes)

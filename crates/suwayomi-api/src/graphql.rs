@@ -1,7 +1,7 @@
 use async_graphql::{Context, EmptySubscription, Enum, Object, Schema, SimpleObject};
-use async_graphql_axum::{GraphQLRequest, GraphQLResponse};
+use async_graphql_axum::{GraphQLProtocol, GraphQLRequest, GraphQLResponse, GraphQLWebSocket};
 use axum::{
-    extract::State,
+    extract::{FromRequestParts, State, WebSocketUpgrade},
     response::{Html, IntoResponse},
 };
 use sqlx::SqlitePool;
@@ -215,6 +215,33 @@ impl From<Category> for models::Category {
     }
 }
 
+#[derive(SimpleObject, Clone)]
+pub struct PlatformInfo {
+    pub arch: String,
+    pub headless: bool,
+    pub os: OsInfo,
+    pub jvm: JvmInfo,
+}
+
+#[derive(SimpleObject, Clone)]
+pub struct OsInfo {
+    pub name: String,
+    pub build: String,
+    pub version: String,
+}
+
+#[derive(SimpleObject, Clone)]
+pub struct JvmInfo {
+    #[graphql(name = "javaVersion")]
+    pub java_version: String,
+    #[graphql(name = "vmName")]
+    pub vm_name: String,
+    #[graphql(name = "vmVendor")]
+    pub vm_vendor: String,
+    #[graphql(name = "vmVersion")]
+    pub vm_version: String,
+}
+
 #[derive(SimpleObject)]
 pub struct AboutServerPayload {
     pub name: String,
@@ -223,12 +250,15 @@ pub struct AboutServerPayload {
     pub build_type: String,
     pub discord: String,
     pub github: String,
+    #[graphql(name = "platformInfo")]
+    pub platform_info: PlatformInfo,
 }
 
 #[derive(SimpleObject)]
 pub struct AboutWebUI {
     pub channel: String,
     pub tag: String,
+    #[graphql(name = "updateTimestamp")]
     pub update_timestamp: String,
 }
 
@@ -341,6 +371,21 @@ impl QueryRoot {
             build_type: "debug".to_string(),
             discord: "".to_string(),
             github: "https://github.com/Shaik2195/suwayomi-rust".to_string(),
+            platform_info: PlatformInfo {
+                arch: std::env::consts::ARCH.to_string(),
+                headless: false,
+                os: OsInfo {
+                    name: std::env::consts::OS.to_string(),
+                    build: "unknown".to_string(),
+                    version: "unknown".to_string(),
+                },
+                jvm: JvmInfo {
+                    java_version: "21.0.0 (Native)".to_string(),
+                    vm_name: "Suwayomi-Rust Tokio Engine".to_string(),
+                    vm_vendor: "Suwayomi-Rust".to_string(),
+                    vm_version: "0.1.0".to_string(),
+                },
+            },
         })
     }
 
@@ -801,6 +846,40 @@ pub async fn graphql_handler(
     req: GraphQLRequest,
 ) -> GraphQLResponse {
     schema.execute(req.into_inner()).await.into()
+}
+
+pub async fn graphql_get_handler(
+    State(schema): State<AppSchema>,
+    req: axum::extract::Request,
+) -> impl IntoResponse {
+    let is_ws = req
+        .headers()
+        .get(axum::http::header::UPGRADE)
+        .and_then(|v| v.to_str().ok())
+        .map(|v| v.eq_ignore_ascii_case("websocket"))
+        .unwrap_or(false);
+
+    if is_ws {
+        let (mut parts, _body) = req.into_parts();
+        let protocol_res = GraphQLProtocol::from_request_parts(&mut parts, &schema).await;
+        let ws_res = WebSocketUpgrade::from_request_parts(&mut parts, &schema).await;
+
+        match (&protocol_res, &ws_res) {
+            (Ok(_), Ok(_)) => {}
+            _ => println!("WS extract failed: protocol_err={:?}, ws_err={:?}", protocol_res.as_ref().err(), ws_res.as_ref().err()),
+        }
+
+        if let (Ok(protocol), Ok(ws)) = (protocol_res, ws_res) {
+            return ws
+                .protocols(["graphql-transport-ws", "graphql-ws"])
+                .on_upgrade(move |socket| {
+                    GraphQLWebSocket::new(socket, schema, protocol).serve()
+                })
+                .into_response();
+        }
+    }
+
+    graphql_playground().await.into_response()
 }
 
 pub async fn graphql_playground() -> impl IntoResponse {

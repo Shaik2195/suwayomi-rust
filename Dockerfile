@@ -2,13 +2,18 @@ FROM rust:alpine AS builder
 
 WORKDIR /app
 
-RUN apk add --no-cache musl-dev sqlite-dev sqlite-static openssl-dev openssl-libs-static pkgconfig build-base
+RUN apk add --no-cache musl-dev sqlite-dev sqlite-static openssl-dev openssl-libs-static pkgconfig build-base curl unzip
 
 # Copy workspace cargo files
 COPY Cargo.toml Cargo.lock ./
 
 # Copy crates
 COPY crates ./crates
+
+# Download and extract official WebUI release into suwayomi-api static directory
+RUN curl -L https://github.com/Suwayomi/Suwayomi-WebUI/releases/download/v20260929.01/Suwayomi-WebUI-v20260929.01.zip -o webui.zip && \
+    unzip -o webui.zip -d crates/suwayomi-api/static && \
+    rm webui.zip
 
 # Test the workspace
 RUN cargo test --workspace
