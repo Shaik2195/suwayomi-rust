@@ -909,23 +909,6 @@ pub struct MetaOrderInput {
     pub by_type: Option<SortOrder>,
 }
 
-#[derive(SimpleObject, Clone)]
-#[graphql(name = "GlobalMetaType")]
-pub struct GlobalMetaType {
-    pub key: String,
-    pub value: String,
-}
-
-#[derive(SimpleObject, Clone, Default)]
-#[graphql(name = "GlobalMetaNodeList")]
-pub struct GlobalMetaNodeList {
-    pub nodes: Vec<GlobalMetaType>,
-    #[graphql(name = "pageInfo")]
-    pub page_info: PageInfo,
-    #[graphql(name = "totalCount")]
-    pub total_count: i32,
-}
-
 // Backward-compatibility listing types
 #[derive(SimpleObject, Clone)]
 pub struct ExtensionListing {
@@ -2011,10 +1994,6 @@ impl QueryRoot {
         Ok(vec![])
     }
 
-    #[graphql(name = "metas")]
-    async fn metas(&self) -> async_graphql::Result<GlobalMetaNodeList> {
-        Ok(GlobalMetaNodeList::default())
-    }
 
     // --- Legacy / Direct Helper Queries ---
 
