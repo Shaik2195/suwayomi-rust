@@ -71,3 +71,14 @@ Suwayomi-Rust is a high-performance Rust rewrite of [Suwayomi-Server](https://gi
    - **Defect 8 (Track button does nothing)**: Implemented `TrackerNodeList` Relay format and rich `TrackerType` with `isLoggedIn`, `authUrl`, etc.
    - **Defect 9 (Change category does nothing)**: Seeded SQLite with default category (`id: 1, 'Default'`) and migration to satisfy foreign key constraints.
 
+10. **Comprehensive Playwright E2E Test Suites**:
+    - **GitHub Issue & Jules PR**: Issue #40 dispatched to Google Jules (`session 9443859238774005398`), resulting in PR #41 merged into `main`.
+    - **Test Suites (`tests/`)**:
+      - `tests/library.spec.ts`: Header controls (Search, Random entry, Settings, Global update), sidebar navigation, manga grid rendering, and batch toolbar actions (Select all, Change categories, Mark as read, Download, Migrate, Remove from library).
+      - `tests/manga-details.spec.ts`: Metadata rendering, In Library toggle, Tracking modal with AniList/MAL, Reload from source, Chapter filter & sort drawer, and chapter context menu (Download, Mark read, Mark previous read, Bookmark, Chapter navigation).
+      - `tests/reader.spec.ts`: Clean UI assertions (tap zone preview overlay hidden), initial page indicator (`1/X`), reader settings drawer, reading mode switches, continuous vertical scroll, and dynamic image loading.
+      - `tests/browse.spec.ts`: Sources tab (MangaDex, AllAnime), Popular/Latest/Search browsing, Extensions tab (Keiyoushi index listing, search/language filters), and Migrate tab.
+      - `tests/settings.spec.ts`: Settings sections navigation, Tracking providers display (`/settings/tracking`), and Category management CRUD (`/settings/categories`).
+      - `tests/e2e.spec.ts`: API and GraphQL health checks.
+    - **CI Automation**: Headless Playwright execution with Chromium automated via `.github/workflows/e2e.yml`.
+
