@@ -124,6 +124,7 @@ pub fn create_router(state: AppState) -> Router {
         .route("/ws", get(ws::ws_handler).with_state(ws_state))
         .nest("/api/v1", api_routes)
         .fallback(static_files::static_handler)
+        .layer(axum::middleware::from_fn(middleware::basic_auth_middleware))
         .layer(middleware::setup_cors())
         .layer(middleware::setup_tracing())
         .layer(middleware::setup_compression())

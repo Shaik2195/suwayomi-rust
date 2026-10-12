@@ -33,7 +33,8 @@ async fn main() -> anyhow::Result<()> {
     tracing::info!("Suwayomi Server starting up...");
 
     // Create data directory if not present
-    let data_dir = PathBuf::from(&args.data_dir);
+    let data_dir_str = std::env::var("SUWAYOMI_DATA_DIR").unwrap_or(args.data_dir);
+    let data_dir = PathBuf::from(&data_dir_str);
     if !data_dir.exists() {
         std::fs::create_dir_all(&data_dir)?;
     }
@@ -92,7 +93,12 @@ async fn main() -> anyhow::Result<()> {
     worker_pool.start(4).await;
 
     // Bind tokio::net::TcpListener
-    let addr = format!("{}:{}", args.bind, args.port);
+    let bind = std::env::var("SUWAYOMI_BIND").unwrap_or(args.bind);
+    let port = std::env::var("SUWAYOMI_PORT")
+        .ok()
+        .and_then(|p| p.parse().ok())
+        .unwrap_or(args.port);
+    let addr = format!("{}:{}", bind, port);
     let listener = tokio::net::TcpListener::bind(&addr).await?;
     tracing::info!("Listening on {}", addr);
 
