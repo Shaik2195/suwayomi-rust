@@ -82,3 +82,8 @@ Suwayomi-Rust is a high-performance Rust rewrite of [Suwayomi-Server](https://gi
       - `tests/e2e.spec.ts`: API and GraphQL health checks.
     - **CI Automation**: Headless Playwright execution with Chromium automated via `.github/workflows/e2e.yml`.
 
+11. **HTTP Basic Authentication & Production Deployment**:
+    - **Authentication & Cookie Caching**: Configured via `BASIC_AUTH_USERNAME` / `SUWAYOMI_BASIC_AUTH_USERNAME` and `BASIC_AUTH_PASSWORD` / `SUWAYOMI_BASIC_AUTH_PASSWORD`. Upon successful validation, issues a 30-day HttpOnly `suwayomi_session` cookie (`Max-Age=2592000; SameSite=Lax; HttpOnly`), eliminating repeated login dialogs for browsers and WebSocket connections.
+    - **Exempt Public Endpoints**: `/health`, `/site.webmanifest`, `/favicon*`, `/apple-touch-icon.png`.
+    - **Production Deliverable**: `suwayomi-rust-docker.zip` packaged with `suwayomi-rust-docker.tar.gz`, `docker-compose.yml`, and `README.md`.
+
