@@ -1,0 +1,58 @@
+name: E2E Tests
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  e2e:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Cache cargo registry & target
+      uses: actions/cache@v3
+      with:
+        path: |
+          ~/.cargo/registry
+          ~/.cargo/git
+          target
+        key: ${{ runner.os }}-cargo-e2e-${{ hashFiles('**/Cargo.lock') }}
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+
+    - name: Install Node dependencies
+      run: npm install
+
+    - name: Install Playwright Browsers
+      run: npx playwright install --with-deps chromium
+
+    - name: Install SQLite3
+      run: sudo apt-get update && sudo apt-get install -y sqlite3 libsqlite3-dev
+
+    - name: Build server binary
+      run: cargo build --bin suwayomi-server --release
+
+    - name: Run Playwright E2E Tests
+      env:
+        BASE_URL: http://127.0.0.1:4567
+      run: |
+        mkdir -p ./data
+        WEBUI_DIR=./webui ./target/release/suwayomi-server --data-dir ./data &
+        SERVER_PID=$!
+        sleep 5
+        npx playwright test
+        kill $SERVER_PID || true
+
+    - name: Upload Playwright Report
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: playwright-report
+        path: playwright-report/
+        retention-days: 14
